@@ -1,8 +1,6 @@
 package procurement;
 
 import procurement.config.kafka.KafkaProcessor;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.annotation.StreamListener;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -22,6 +20,15 @@ public class PolicyHandler{
 
         // Sample Logic //
         System.out.println("\n\n##### listener ReceiveInspectionRequest : " + inspectionRequestPatched.toJson() + "\n\n");
+
+        InspectionResult inspectionResult = new InspectionResult();
+        inspectionResult.setProcNo(inspectionRequestPatched.getProcNo());
+        inspectionResult.setCompanyNo(inspectionRequestPatched.getCompanyNo());
+        inspectionResult.setCompanyNm(inspectionRequestPatched.getCompanyNm());
+        inspectionResult.setCompanyPhoneNo(inspectionRequestPatched.getCompanyPhoneNo());
+        inspectionResult.setInspectionContents(inspectionRequestPatched.getInspectionContents());
+
+        inspectionResultRepository.save(inspectionResult);
     }
     @StreamListener(KafkaProcessor.INPUT)
     public void wheneverProcurementRequestCanceled_InspectionResultCanceled(@Payload ProcurementRequestCanceled procurementRequestCanceled){
@@ -32,6 +39,10 @@ public class PolicyHandler{
 
         // Sample Logic //
         System.out.println("\n\n##### listener InspectionResultCanceled : " + procurementRequestCanceled.toJson() + "\n\n");
+
+        InspectionResult inspectionResult = inspectionResultRepository.findByNoticeNo(procurementRequestCanceled.getProcNo());
+        
+        inspectionResultRepository.delete(inspectionResult);
     }
 
 

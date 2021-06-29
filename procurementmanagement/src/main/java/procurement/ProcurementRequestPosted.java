@@ -46,11 +46,11 @@ public class ProcurementRequestPosted extends AbstractEvent {
     public void setProcPrice(Integer procPrice) {
         this.procPrice = procPrice;
     }
-    public String getProcInstitute() {
+    public String getProcAgency() {
         return procAgency;
     }
 
-    public void setProcInstitute(String procAgency) {
+    public void setProcAgency(String procAgency) {
         this.procAgency = procAgency;
     }
     public Double getProcQty() {

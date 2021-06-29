@@ -1,0 +1,82 @@
+server:
+  port: 8088
+
+---
+
+spring:
+  profiles: default
+  cloud:
+    gateway:
+      routes:
+        - id: procurementmanagement
+          uri: http://localhost:8081
+          predicates:
+            - Path=/deliverymanagements/** 
+        - id: procurementrequest
+          uri: http://localhost:8082
+          predicates:
+            - Path=/deliveryrequests/**/inspectionResults/** 
+        - id: goodsdelivery
+          uri: http://localhost:8083
+          predicates:
+            - Path=/goodsdeliveries/** 
+        - id: mypage
+          uri: http://localhost:8084
+          predicates:
+            - Path= /deliveryStatusInquiries/**
+        - id: notification
+          uri: http://localhost:8085
+          predicates:
+            - Path=/smsHistories/** 
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "*"
+            allowedMethods:
+              - "*"
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+
+
+---
+
+spring:
+  profiles: docker
+  cloud:
+    gateway:
+      routes:
+        - id: procurementmanagement
+          uri: http://procurementmanagement:8080
+          predicates:
+            - Path=/deliverymanagements/** 
+        - id: procurementrequest
+          uri: http://procurementrequest:8080
+          predicates:
+            - Path=/deliveryrequests/**/inspectionResults/** 
+        - id: goodsdelivery
+          uri: http://goodsdelivery:8080
+          predicates:
+            - Path=/goodsdeliveries/** 
+        - id: mypage
+          uri: http://mypage:8080
+          predicates:
+            - Path= /deliveryStatusInquiries/**
+        - id: notification
+          uri: http://notification:8080
+          predicates:
+            - Path=/smsHistories/** 
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "*"
+            allowedMethods:
+              - "*"
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+
+server:
+  port: 8080

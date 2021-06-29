@@ -6,5 +6,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 @RepositoryRestResource(collectionResourceRel="deliverymanagements", path="deliverymanagements")
 public interface DeliverymanagementRepository extends PagingAndSortingRepository<Deliverymanagement, Long>{
 
+    Deliverymanagement findByProcNo(String procNo);
+
 
 }

@@ -1,8 +1,6 @@
 package procurement;
 
 import procurement.config.kafka.KafkaProcessor;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.annotation.StreamListener;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -21,6 +19,11 @@ public class PolicyHandler{
 
         // Sample Logic //
         System.out.println("\n\n##### listener ReceiveDeliveryRequest : " + deliveryRequestPatched.toJson() + "\n\n");
+
+        Goodsdelivery goodsdelivery = new Goodsdelivery();
+        goodsdelivery.setProcNo(deliveryRequestPatched.getProcNo());
+
+        goodsdeliveryRepository.save(goodsdelivery);
     }
     @StreamListener(KafkaProcessor.INPUT)
     public void wheneverProcurementNoticeCanceled_CancelInspectionRequest(@Payload ProcurementNoticeCanceled procurementNoticeCanceled){
@@ -31,6 +34,10 @@ public class PolicyHandler{
 
         // Sample Logic //
         System.out.println("\n\n##### listener CancelInspectionRequest : " + procurementNoticeCanceled.toJson() + "\n\n");
+
+        Goodsdelivery goodsdelivery = goodsdeliveryRepository.findByProcNo(procurementNoticeCanceled.getProcNo());
+        
+        goodsdeliveryRepository.delete(goodsdelivery);
     }
 
 

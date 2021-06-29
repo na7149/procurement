@@ -2,8 +2,6 @@ package procurement;
 
 import javax.persistence.*;
 import org.springframework.beans.BeanUtils;
-import java.util.List;
-import java.util.Date;
 
 @Entity
 @Table(name="InspectionResult_table")
@@ -20,7 +18,7 @@ public class InspectionResult {
     private Boolean inspectionSuccFlag;
 
     @PostUpdate
-    public void onPostUpdate(){
+    public void onPostUpdate() throws Exception{
         InspectionResultPatched inspectionResultPatched = new InspectionResultPatched();
         BeanUtils.copyProperties(this, inspectionResultPatched);
         inspectionResultPatched.publishAfterCommit();
@@ -28,10 +26,22 @@ public class InspectionResult {
         //Following code causes dependency to external APIs
         // it is NOT A GOOD PRACTICE. instead, Event-Policy mapping is recommended.
 
-        procurement.external.Deliverymanagement deliverymanagement = new procurement.external.Deliverymanagement();
-        // mappings goes here
-        Application.applicationContext.getBean(procurement.external.DeliverymanagementService.class)
-            .announceInspectionResult(deliverymanagement);
+        // 검수 성공이 아니면 Skip.
+        if(getInspectionSuccFlag() == false) return;
+
+        try{
+            // mappings goes here
+            boolean isUpdated = ProcurementrequestApplication.applicationContext.getBean(procurement.external.DeliverymanagementService.class)
+            .announceInspectionResult(getProcNo(), getCompanyNo(), getCompanyNm(), getInspectionSuccFlag());
+
+            if(isUpdated == false){
+                throw new Exception("납품관리 서비스의 검사공고에 검사결과 정보가 갱신되지 않음");
+            }
+        }catch(java.net.ConnectException ce){
+            throw new Exception("납품관리 서비스 연결 실패");
+        }catch(Exception e){
+            throw new Exception("납품관리 서비스 처리 실패");
+        }
 
     }
     @PreUpdate
