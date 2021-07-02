@@ -358,56 +358,80 @@ public interface InspectionResultRepository extends PagingAndSortingRepository<I
 - 적용 후 REST API 의 테스트
   - 수요기관담당자는 조달요청서를 등록한다. (Command-POST)
 ```
-    http POST localhost:8082/procurementrequest procNo=p01 procTitle=title01
-    http GET http://localhost:8082/procurementrequest/1
+    http POST localhost:8082/deliveryrequests procNo=p01 procTitle=title01
+    http GET http://localhost:8082/deliveryrequests/1
 ```
+![image](https://user-images.githubusercontent.com/84000959/124300988-24931e80-db9a-11eb-9f3f-8afba52ee256.png)
+
   - 조달요청서는 납품관리 서비스로 전달(연계)된다. (Async-Policy)
 ```
-    http GET http://localhost:8081/procurementmanagement/1
+    http GET http://localhost:8081/deliverymanagements/1
 ```
+![image](https://user-images.githubusercontent.com/84000959/124301100-4ee4dc00-db9a-11eb-8e42-47055d3d6268.png)
+
   - 조달청담당자는 조달요청서에 납품요구서 정보를 갱신한다. (Command-PATCH)
 ```
-    http PATCH http://localhost:8081/procurementmanagement/1 procNo=p01 companyNo=c01 companyNm=redbull
-    http GET http://localhost:8081/procurementmanagement/1
+    http PATCH http://localhost:8081/deliverymanagements/1 procNo=p01 companyNo=c01 companyNm=redbull
+    http GET http://localhost:8081/deliverymanagements/1
 ```
+![image](https://user-images.githubusercontent.com/84000959/124301154-60c67f00-db9a-11eb-9607-ac5a10e88a5f.png)
+
   - 납품요구 서가 물품납품 서비스로 전달(연계)된다. (Async-Policy)
 ```
-    http GET http://localhost:8083/goodsdelivery/1
+    http GET http://localhost:8083/goodsdeliveries/1
 ```
+![image](https://user-images.githubusercontent.com/84000959/124301217-75a31280-db9a-11eb-87c4-456f4403674a.png)
+
   - 조달업체담당자는 검사검수요청서를 등록한다. (Command-PATCH)
 ```
-    http PATCH http://localhost:8083/goodsdelivery/1 procNo=p01 companyPhoneNo=010-1234-1234
-    http GET http://localhost:8083/goodsdelivery/1
+    http PATCH http://localhost:8083/goodsdeliveries/1 procNo=p01 companyPhoneNo=010-1234-1234
+    http GET http://localhost:8083/goodsdeliveries/1
 ```
+![image](https://user-images.githubusercontent.com/84000959/124301272-8bb0d300-db9a-11eb-9341-cc06346e2040.png)
+
   - 검사검수요청서가 납품요구 서비스로 전달(연계)된다. (Async-Policy)
 ```
-    http GET http://localhost:8082/inspectionresult/1
+    http GET http://localhost:8082/inspectionResults/2
 ```
+![image](https://user-images.githubusercontent.com/84000959/124301580-fd891c80-db9a-11eb-806a-6ae29a50c461.png)
+
   - 수요기관담당자는 검사검수요청서에 검사결과를 갱신한다. (Command-PATCH)
 ```
-    http PATCH http://localhost:8082/inspectionresult/1 procNo=p01 inspectionSuccFlag=true
-    http GET http://localhost:8082/inspectionresult/1
+    http PATCH http://localhost:8082/inspectionResults/2 procNo=p01 inspectionSuccFlag=true
+    http GET http://localhost:8082/inspectionResults/2
 ```
+![image](https://user-images.githubusercontent.com/84000959/124303682-ad5f8980-db9d-11eb-8cc0-4dd64bad6483.png)
+
   - 검사결과가 notifaction 서비스로 전달(연계)된다. (Async-Policy)
 ```
-    http GET http://localhost:8085/notification/1
+    http GET http://localhost:8085/smsHistories/1
 ```
+![image](https://user-images.githubusercontent.com/84000959/124303719-ba7c7880-db9d-11eb-88e4-3e86e8036459.png)
+
   - 검사결과가 갱신되면 납품관리 서비스에 검사결과 정보가 갱신(공지)된다. (Sync-Req/Res)
 ```
-    http GET http://localhost:8081/procurementmanagement/1
+    http GET http://localhost:8081/deliverymanagements/1
 ```
+![image](https://user-images.githubusercontent.com/84000959/124303785-ce27df00-db9d-11eb-9fd0-c7694d648fc7.png)
+
   - 납품관리 서비스 Down 시 납품요구 서비스의 검사결과 갱신도 실패한다. (Sync-Req/Res)
 ```
-    http PATCH http://localhost:8082/inspectionresult/1 procNo=p01 inspectionSuccFlag=true
+    http PATCH http://localhost:8082/inspectionresults/1 procNo=p01 inspectionSuccFlag=true
 ```
+![image](https://user-images.githubusercontent.com/84000959/124302557-5311f900-db9c-11eb-9274-ed58471f98a0.png)
+
   - mypage 서비스에서 납품현황을 조회한다. (CQRS)
 ```
 http GET localhost:8084/deliveryStatusInquiries
 ```
+![image](https://user-images.githubusercontent.com/84000959/124303831-df70eb80-db9d-11eb-84f4-01cb3cc794f9.png)
+
   - gateway-납품현황조회(Gateway 8088포트로 진입점 통일)
 ```
 http GET localhost:8088/deliveryStatusInquiries
 ```
+![image](https://user-images.githubusercontent.com/84000959/124303877-ed267100-db9d-11eb-8d7e-a125da1965fb.png)
+
 
 
 ## 폴리글랏 퍼시스턴스
