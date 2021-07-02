@@ -5,7 +5,7 @@
 
 ### Repositories
 
-- https://github.com/21-2-1team/bidding03.git
+- https://github.com/na7149/procurement.git
 
 
 
@@ -50,16 +50,17 @@
 ### 기능적 요구 사항
 
 ```
-• 입찰담당부서는 입찰공고를 등록한다.
-• 입찰공고가 등록되면 입찰공고가 접수된다.
-• 조달업체는 입찰서를 등록한다.
-• 입찰서가 등록되면 입찰심사가 접수(등록)된다.
-• 심사부서는 심사결과를 등록한다.
-• 심사결과가 등록되면 입찰공고에 낙찰자 정보가 등록(공지)된다.
-• 입찰담당부서는 입찰공고를 취소 할 수 있다.
-• 입찰공고가 취소되면 입찰서 등록 및 심사결과도 취소된다.
-• 입찰서 등록, 입찰서 등록 취소, 낙찰자 등록 시 조달업체 담당자에게 SMS를 발송한다.
-• 조달업체는 입찰현황을 조회 할 수 있다.
+• 수요기관담당자는 조달요청서를 등록한다.
+• 조달요청서는 납품관리 서비스로 전달(연계)된다.
+• 조달청담당자는 조달요청서에 납품요구서 정보를 갱신한다.
+• 납품요구 서가 물품납품 서비스로 전달(연계)된다.
+• 조달업체담당자는 검사검수요청서를 등록한다.
+• 검사검수요청서가 납품요구 서비스로 전달(연계)된다.
+• 수요기관담당자는 검사검수요청서에 검사결과를 갱신한다.
+• 검사결과가 갱신되면 납품관리 서비스에 검사결과 정보가 갱신(공지)된다.
+• 수요기관담당자는 조달요청을 취소 할 수 있다.
+• 조달요청이 취소되면 납품요구, 검사요청, 검사결과도 취소된다.
+• 검사결과 정보 등록 시 조달업체 담당자에게 SMS를 발송한다.
 ※ 위 시나리오는 가상의 절차로, 실제 업무와 다를 수 있습니다.
 ```
 
@@ -67,22 +68,22 @@
 
 ```
 1. 트랜잭션
-  - 심사결과가 등록되면 입찰공고에 낙찰자 정보가 등록되어야 한다. (Sync 호출)
+  - 검사결과가 등록되면 납품관리 서비스에 검사결과 정보가 등록되어야 한다. (Sync 호출)
 2. 장애격리
-  - 입찰심사 기능이 수행되지 않더라도 입찰관리, 입찰참여 기능은 365일 24시간 받을 수 있어야 한다. Async (event-driven), Eventual Consistency
-  - 입찰참여 기능이 과중되면 사용자를 잠시 동안 받지 않고 입찰참여를 잠시후에 하도록 유도한다. Circuit breaker, fallback
+  - 물품납품 서비스가 동작되지 않더라도 납품요구, 납품관리 서비스는 365일 24시간 받을 수 있어야 한다. Async (event-driven), Eventual Consistency
+  - 납품요구 서비스가 과중되면 사용자를 잠시 동안 받지 않고 납품요구를 잠시 후에 하도록 유도한다. Circuit breaker, fallback
 3. 성능
-  - 조달업체는 입찰현황조회 화면에서 입찰 상태를 확인 할 수 있어야 한다.CQRS - 조회전용 서비스
+  - 조달업체는 납품현황조회 화면에서 검사 상태를 확인 할 수 있어야 한다.CQRS - 조회전용 서비스
 ```
 
 ### Microservice명
 
 ```
-입찰관리 – BiddingManagement
-입찰참여 - BiddingParticipation
-입찰심사 - BiddingExamination
-문자알림이력 - Notification
-입찰현황조회 - MyPage
+납품요구 – procurementrequest
+납품관리 - procurementmanagement
+물품납품 - goodsdelivery
+문자알림 - notification
+CQRS - mypage
 ```
 
 
@@ -97,29 +98,27 @@
 
 ### TO-BE 조직 (Vertically-Aligned)
 
-![2  TO-BE 조직](https://user-images.githubusercontent.com/84000922/122162398-7c4d3c80-ceae-11eb-88b9-863f1e58ba41.png)
-
-
+![image](https://user-images.githubusercontent.com/84000959/124289090-e3484200-db8c-11eb-946f-f12c9e7c1a43.png)
 
 
 
 
 ### 이벤트 도출
 
-![3  이벤트 도출](https://user-images.githubusercontent.com/84000922/122162410-7fe0c380-ceae-11eb-9822-adb2c3b8d62a.png)
+![image](https://user-images.githubusercontent.com/84000959/124289178-fd822000-db8c-11eb-8bc3-bca55ac54b88.png)
 
 
 
 
 ### 부적격 이벤트 탈락
 
-![4  부적격 이벤트 탈락](https://user-images.githubusercontent.com/84000922/122162412-7fe0c380-ceae-11eb-8aba-20f04b2a4dbb.png)
+![image](https://user-images.githubusercontent.com/84000959/124289227-096de200-db8d-11eb-9741-7c6325dca180.png)
 
 ```
 - 과정중 도출된 잘못된 도메인 이벤트들을 걸러내는 작업을 수행
-- 이의제기등록됨 : 후행 시나리오라서 제외
-- 가격심사점수등록됨 : 속성 정보여서 제외
-- 입찰공고메뉴선택됨, 입찰현황조회됨 : UI 의 이벤트이지, 업무적인 의미의 이벤트가 아니라서 제외 
+- 검수결과등록됨, 세금계산서발급됨, 수수료납부됨 등 : 후행 시나리오라서 제외
+- 조달업체선택됨, 조달요청메뉴선택됨, 검사현황조회됨 : UI 의 이벤트이지, 업무적인 의미의 이벤트가 아니라서 제외
+- 문자발송됨 : 문자 발송 후 이벤트가 없어서 제외
 ```
 
 
@@ -127,17 +126,17 @@
 
 ### 액터, 커맨드 부착하여 읽기 좋게
 
-![5  액터, 커맨드 부착하여 읽기 좋게](https://user-images.githubusercontent.com/84000922/122162413-80795a00-ceae-11eb-9b06-668274f351f7.png)
+![image](https://user-images.githubusercontent.com/84000959/124289285-1ab6ee80-db8d-11eb-802e-723c4b54c776.png)
 
 
 
 
 ### 어그리게잇으로 묶기
 
-![6  어그리게잇으로 묶기](https://user-images.githubusercontent.com/84000922/122162415-80795a00-ceae-11eb-8b57-846e1779e420.png)
+![image](https://user-images.githubusercontent.com/84000959/124289322-230f2980-db8d-11eb-8767-a8b7b4fd67b0.png)
 
 ```
-- 입찰관리, 입찰참여, 입찰심사는 그와 연결된 command 와 event 들에 의하여 트랜잭션이 유지되어야 하는 단위로 그들 끼리 묶어줌
+- 납품요구, 납품관리, 물품납품은 그와 연결된 command 와 event 들에 의하여 트랜잭션이 유지되어야 하는 단위로 그들 끼리 묶어줌
 ```
 
 
@@ -145,13 +144,13 @@
 
 ### 바운디드 컨텍스트로 묶기
 
-![7  바운디드 컨텍스트로 묶기](https://user-images.githubusercontent.com/84000922/122162416-8111f080-ceae-11eb-87be-10c03082eab2.png)
+![image](https://user-images.githubusercontent.com/84000959/124289379-3621f980-db8d-11eb-8f35-e7bc5bdd9ca2.png)
 
 ```
 도메인 서열 분리
-- Core Domain: 입찰관리, 입찰참여: 없어서는 안될 핵심 서비스이며, 연간 Up-time SLA 수준을 99.999% 목표, 입찰관리배포주기는 1개월 1회 미만, 입찰참여 배포주기는 1주일 1회 미만
- - Supporting Domain: 입찰심사 : 경쟁력을 내기 위한 서비스이며, SLA 수준은 연간 60% 이상 uptime 목표, 배포주기는 각 팀의 자율이나 표준 스프린트 주기가 1주일 이므로 1주일 1회 이상을 기준으로 함. 
-- General Domain: Notification : 알림서비스로 3rd Party 외부 서비스를 사용하는 것이 경쟁력이 높음 (핑크색으로 이후 전환할 예정)
+- Core Domain: 납품요구, 납품관리 : 없어서는 안될 핵심 서비스이며, 연견 Up-time SLA 수준을 99.999% 목표, 납품요구 서비스 배포주기는 1개월 1회 미만, 납풉관리 서비스 배포주기는 1주일 1회 미만
+- Supporting Domain: 물품납품 : 경쟁력을 내기 위한 서비스이며, SLA 수준은 연간 60% 이상 uptime 목표, 배포주기는 각 팀의 자율이나 표준 스프린트 주기가 1주일 이므로 1주일 1회 이상을 기준으로 함. 
+- General Domain: Notification : 문자알림 서비스는 3rd Party 외부 서비스를 사용하는 것이 경쟁력이 높음 (핑크색으로 이후 전환할 예정)
 ```
 
 
@@ -159,24 +158,19 @@
 
 ### 폴리시 부착, 이동 및 컨텍스트 매핑(점선은 Pub/Sub, 실선은 Req/Resp)
 
-![image](https://user-images.githubusercontent.com/84000959/122225382-fc47c680-ceef-11eb-859f-70c06e195310.png)
-
-
-
-### 완성된 1차 모형
-
-![image](https://user-images.githubusercontent.com/84000959/122225301-e76b3300-ceef-11eb-8263-847226aba7a6.png)
+![image](https://user-images.githubusercontent.com/84000959/124289453-4f2aaa80-db8d-11eb-8008-3dfed1de46f8.png)
 
 
 
 ### 1차 완성본에 대한 기능적 요구사항을 커버하는지 검증 (1/2)
 
-![10  1차 완성본에 대한 기능적](https://user-images.githubusercontent.com/84000922/122162421-82431d80-ceae-11eb-8a7d-18df4aff613a.png)
+![image](https://user-images.githubusercontent.com/84000959/124289545-69648880-db8d-11eb-9cb6-89d27cd2f75a.png)
 
 ```
-1) 입찰담당부서는 입찰공고를 등록한다. 입찰공고가 등록되면 입찰공고가 접수된다.
-2) 조달업체는 입찰서를 등록한다. 입찰서가 등록되면 입찰심사가 접수(등록)된다.
-3) 심사부서는 심사결과를 등록한다. 심사결과가 등록되면 입찰공고에 낙찰자 정보가 등록(공지)된다.
+1) 수요기관담당자는 조달요청서를 등록한다. 조달요청서는 납품관리 서비스로 전달(연계)된다.
+2) 조달청담당자는 조달요청서에 납품요구서 정보를 갱신한다. 납품요구 서가 물품납품 서비스로 전달(연계)된다.
+3) 조달업체담당자는 검사검수요청서를 등록한다. 검사검수요청서가 납품요구 서비스로 전달(연계)된다.
+4) 수요기관담당자는 검사검수요청서에 검사결과를 갱신한다. 검사결과가 갱신되면 납품관리 서비스에 검사결과 정보가 갱신(공지)된다.
 ```
 
 
@@ -184,13 +178,12 @@
 
 ### 1차 완성본에 대한 기능적 요구사항을 커버하는지 검증 (2/2)
 
-![11  1차 완성본에 대한 기능적 요구사항](https://user-images.githubusercontent.com/84000922/122162422-82431d80-ceae-11eb-9645-c57cd204c18e.png)
+![image](https://user-images.githubusercontent.com/84000959/124289625-7da88580-db8d-11eb-8702-ccec3e421ffe.png)
 
 ```
-1) 입찰담당부서는 입찰공고를 취소 할 수 있다. 
-   입찰공고가 취소되면 입찰서 등록 및 심사결과도 취소된다.
-2) 입찰서 등록, 입찰서 등록 취소, 낙찰자 등록 시 조달업체 담당자에게 SMS를 발송한다.
-3) 조달업체는 입찰현황을 조회 할 수 있다.
+1) 조달요청이 취소되면 납품요구와 검사결과도 취소된다.
+2) 납품요구가 취소되면 검사요청도 취소된다.
+3) 검사결과 정보 등록 시 조달업체 담당자에게 SMS를 발송한다.
 ```
 
 
@@ -198,18 +191,16 @@
 
 ### 1차 완성본에 대한 비기능적 요구사항을 커버하는지 검증
 
-![12  1차 완성본에 대한 비기능적](https://user-images.githubusercontent.com/84000922/122162424-82dbb400-ceae-11eb-92d5-9f938ac7d6cf.png)
+![image](https://user-images.githubusercontent.com/84000959/124289788-a9c40680-db8d-11eb-815a-f407fedbc828.png)
 
 ```
 1. 트랜잭션
-  - 심사결과가 등록되면 입찰공고에 낙찰자 정보가 등록되어야 한다. (Sync 호출)
+  - 검사결과가 등록되면 납품관리 서비스에 검사결과 정보가 등록되어야 한다. (Sync 호출)
 2. 장애격리
-  - 입찰심사 기능이 수행되지 않더라도 입찰관리, 입찰참여 기능은 365일 24시간 받을 수 있어야 한다. 
-    Async (event-driven), Eventual Consistency
-  - 입찰참여 기능이 과중되면 사용자를 잠시 동안 받지 않고 입찰참여를 잠시후에 하도록 유도한다.
-    Circuit breaker, fallback
+  - 물품납품 서비스가 동작되지 않더라도 납품요구, 납품관리 서비스는 365일 24시간 받을 수 있어야 한다. Async (event-driven), Eventual Consistency
+  - 납품요구 서비스가 과중되면 사용자를 잠시 동안 받지 않고 납품요구를 잠시 후에 하도록 유도한다. Circuit breaker, fallback
 3. 성능
-  - 조달업체는 입찰현황조회 화면에서 입찰 상태를 확인 할 수 있어야 한다.CQRS - 조회전용 서비스
+  - 조달업체는 납품현황조회 화면에서 검사 상태를 확인 할 수 있어야 한다.CQRS - 조회전용 서비스
 ```
 
 
@@ -217,14 +208,14 @@
 
 ### 헥사고날 아키텍처 다이어그램 도출
 
-![13  헥사고날 아키텍처 다이어그램 도출](https://user-images.githubusercontent.com/84000922/122162425-82dbb400-ceae-11eb-9e47-eef31b055935.png)
+![image](https://user-images.githubusercontent.com/84000959/124289858-bba5a980-db8d-11eb-81d9-d3354ce8d72d.png)
 
 
 
 
 ### Git Organization / Repositories
 
-![image](https://user-images.githubusercontent.com/84000959/122514263-a2a5e000-d046-11eb-8ee9-1e2b53211df7.png)
+![image](https://user-images.githubusercontent.com/84000959/124289904-c95b2f00-db8d-11eb-9557-4e8f0c329aab.png)
 
 
 # 구현:
@@ -232,19 +223,19 @@
 (서비스 별 포트) 분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트 등으로 구현하였다. 구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같다 (각자의 포트넘버는 8081 ~ 8085, 8088 이다)
 
 ```
-cd BiddingManagement
+cd procurementrequest
 mvn spring-boot:run
 
-cd BiddingParticipation
+cd procurementmanagement
 mvn spring-boot:run 
 
-cd BiddingExamination
+cd goodsdelivery
 mvn spring-boot:run  
 
-cd Notification
+cd notification
 mvn spring-boot:run
 
-cd MyPage
+cd mypage
 mvn spring-boot:run
 
 cd gateway
@@ -253,53 +244,48 @@ mvn spring-boot:run
 
 ## DDD 의 적용
 
-- (Entity 예시) 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다: (아래 예시는 입찰관리 마이크로 서비스). 이때 가능한 현업에서 사용하는 언어 (유비쿼터스 랭귀지)를 그대로 사용하려고 노력했다.
+- (Entity 예시) 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다: (아래 예시는  마이크로 서비스). 이때 가능한 현업에서 사용하는 언어 (유비쿼터스 랭귀지)를 그대로 사용하려고 노력했다.
 
 ```
-package bidding;
+package procurement;
 
 import javax.persistence.*;
 import org.springframework.beans.BeanUtils;
-import java.util.Date;
 
 @Entity
-@Table(name="BiddingManagement_table")
-public class BiddingManagement {
+@Table(name="Deliveryrequest_table")
+public class Deliveryrequest {
 
     @Id
     @GeneratedValue(strategy=GenerationType.AUTO)
     private Long id;
-    private String noticeNo;
-    private String title;
-    private Date dueDate;
-    private Integer price;
-    private String demandOrgNm;
-    private String bizInfo;
-    private String qualifications;
-    private String succBidderNm;
-    private String phoneNumber;
+    private String procNo;
+    private String procTitle;
+    private String procContents;
+    private Integer procPrice;
+    private String procAgency;
+    private Double procQty;
 
     @PostPersist
     public void onPostPersist(){
-        NoticeRegistered noticeRegistered = new NoticeRegistered();
-        BeanUtils.copyProperties(this, noticeRegistered);
-        noticeRegistered.publishAfterCommit();
-    }
+        ProcurementRequestPosted procurementRequestPosted = new ProcurementRequestPosted();
+        BeanUtils.copyProperties(this, procurementRequestPosted);
+        procurementRequestPosted.publishAfterCommit();
 
-    @PostUpdate
-    public void onPostUpdate(){
-        SuccessBidderRegistered successBidderRegistered = new SuccessBidderRegistered();
-        BeanUtils.copyProperties(this, successBidderRegistered);
-        successBidderRegistered.publishAfterCommit();
     }
-
     @PostRemove
     public void onPostRemove(){
-        NoticeCanceled noticeCanceled = new NoticeCanceled();
-        BeanUtils.copyProperties(this, noticeCanceled);
-        noticeCanceled.publishAfterCommit();
-    }
+        ProcurementRequestCanceled procurementRequestCanceled = new ProcurementRequestCanceled();
+        BeanUtils.copyProperties(this, procurementRequestCanceled);
+        procurementRequestCanceled.publishAfterCommit();
 
+    }
+    @PrePersist
+    public void onPrePersist(){
+    }
+    @PreRemove
+    public void onPreRemove(){
+    }
 
     public Long getId() {
         return id;
@@ -308,71 +294,48 @@ public class BiddingManagement {
     public void setId(Long id) {
         this.id = id;
     }
-    public String getNoticeNo() {
-        return noticeNo;
+    public String getProcNo() {
+        return procNo;
     }
 
-    public void setNoticeNo(String noticeNo) {
-        this.noticeNo = noticeNo;
+    public void setProcNo(String procNo) {
+        this.procNo = procNo;
     }
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-    public Date getDueDate() {
-        return dueDate;
+    public String getProcTitle() {
+        return procTitle;
     }
 
-    public void setDueDate(Date dueDate) {
-        this.dueDate = dueDate;
+    public void setProcTitle(String procTitle) {
+        this.procTitle = procTitle;
     }
-    public Integer getPrice() {
-        return price;
-    }
-
-    public void setPrice(Integer price) {
-        this.price = price;
-    }
-    public String getDemandOrgNm() {
-        return demandOrgNm;
+    public String getProcContents() {
+        return procContents;
     }
 
-    public void setDemandOrgNm(String demandOrgNm) {
-        this.demandOrgNm = demandOrgNm;
+    public void setProcContents(String procContents) {
+        this.procContents = procContents;
     }
-    public String getBizInfo() {
-        return bizInfo;
-    }
-
-    public void setBizInfo(String bizInfo) {
-        this.bizInfo = bizInfo;
-    }
-    public String getQualifications() {
-        return qualifications;
+    public Integer getProcPrice() {
+        return procPrice;
     }
 
-    public void setQualifications(String qualifications) {
-        this.qualifications = qualifications;
+    public void setProcPrice(Integer procPrice) {
+        this.procPrice = procPrice;
     }
-    public String getSuccBidderNm() {
-        return succBidderNm;
-    }
-
-    public void setSuccBidderNm(String succBidderNm) {
-        this.succBidderNm = succBidderNm;
-    }
-    
-    public String getPhoneNumber() {
-        return phoneNumber;
+    public String getProcAgency() {
+        return procAgency;
     }
 
-    public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
+    public void setProcAgency(String procAgency) {
+        this.procAgency = procAgency;
+    }
+    public Double getProcQty() {
+        return procQty;
     }
 
+    public void setProcQty(Double procQty) {
+        this.procQty = procQty;
+    }
 }
 ```
 - (Repository 예시) Entity Pattern 과 Repository Pattern 을 적용하여 JPA 를 통하여 다양한 데이터소스 유형 (RDB or NoSQL) 에 대한 별도의 처리가 없도록 데이터 접근 어댑터를 자동 생성하기 위하여 Spring Data REST 의 RestRepository 를 적용하였다
