@@ -218,7 +218,10 @@ CQRS - mypage
 ![image](https://user-images.githubusercontent.com/84000959/124289904-c95b2f00-db8d-11eb-9557-4e8f0c329aab.png)
 
 
-# 구현:
+
+
+# 구현
+
 
 (서비스 별 포트) 분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트 등으로 구현하였다. 구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같다 (각자의 포트넘버는 8081 ~ 8085, 8088 이다)
 
@@ -244,7 +247,7 @@ mvn spring-boot:run
 
 ## DDD 의 적용
 
-- (Entity 예시) 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다: (아래 예시는  마이크로 서비스). 이때 가능한 현업에서 사용하는 언어 (유비쿼터스 랭귀지)를 그대로 사용하려고 노력했다.
+- (Entity 예시) 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다: (아래 예시는 납품요구 Entity). 이때 가능한 현업에서 사용하는 언어 (유비쿼터스 랭귀지)를 그대로 사용하려고 노력했다.
 
 ```
 package procurement;
@@ -340,39 +343,71 @@ public class Deliveryrequest {
 ```
 - (Repository 예시) Entity Pattern 과 Repository Pattern 을 적용하여 JPA 를 통하여 다양한 데이터소스 유형 (RDB or NoSQL) 에 대한 별도의 처리가 없도록 데이터 접근 어댑터를 자동 생성하기 위하여 Spring Data REST 의 RestRepository 를 적용하였다
 ```
-package bidding;
+package procurement;
 
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
-@RepositoryRestResource(collectionResourceRel="biddingManagements", path="biddingManagements")
-public interface BiddingManagementRepository extends PagingAndSortingRepository<BiddingManagement, Long>{
+@RepositoryRestResource(collectionResourceRel="inspectionResults", path="inspectionResults")
+public interface InspectionResultRepository extends PagingAndSortingRepository<InspectionResult, Long>{
 
-    BiddingManagement findByNoticeNo(String noticeNo);
+    InspectionResult findByProcNo(String procNo);
 }
 ```
 
 - 적용 후 REST API 의 테스트
-
-![image](https://user-images.githubusercontent.com/84000959/122253612-47b99f00-cf07-11eb-85c1-bc9736d97ec9.png)
-
-![image](https://user-images.githubusercontent.com/84000959/122253640-5011da00-cf07-11eb-8b8d-b954879ab902.png)
-
-![image](https://user-images.githubusercontent.com/84000959/122253676-586a1500-cf07-11eb-8d1a-7b7b966a27bf.png)
-
-![image](https://user-images.githubusercontent.com/84000959/122253698-5ef88c80-cf07-11eb-8b40-5ae0ccbbd91e.png)
-
-![image](https://user-images.githubusercontent.com/84000959/122327901-9f88f200-cf69-11eb-8aa7-3edffac01e7a.png)
-
-![image](https://user-images.githubusercontent.com/84000959/122253729-66b83100-cf07-11eb-8d38-bfb30aabfa7e.png)
-
-![image](https://user-images.githubusercontent.com/84000959/122253779-720b5c80-cf07-11eb-88c7-8e6c687c63a3.png)
-
-![image](https://user-images.githubusercontent.com/84000959/122253810-79cb0100-cf07-11eb-8557-fad7d460bd75.png)
-
-![image](https://user-images.githubusercontent.com/84000959/122331399-b5011a80-cf6f-11eb-8cdc-27bd84ef5cfd.png)
-
-![image](https://user-images.githubusercontent.com/84000959/122337586-7f612f00-cf79-11eb-94cd-d5af9ff136de.png)
+  - 수요기관담당자는 조달요청서를 등록한다. (Command-POST)
+```
+    http POST localhost:8082/procurementrequest procNo=p01 procTitle=title01
+    http GET http://localhost:8082/procurementrequest/1
+```
+  - 조달요청서는 납품관리 서비스로 전달(연계)된다. (Async-Policy)
+```
+    http GET http://localhost:8081/procurementmanagement/1
+```
+  - 조달청담당자는 조달요청서에 납품요구서 정보를 갱신한다. (Command-PATCH)
+```
+    http PATCH http://localhost:8081/procurementmanagement/1 procNo=p01 companyNo=c01 companyNm=redbull
+    http GET http://localhost:8081/procurementmanagement/1
+```
+  - 납품요구 서가 물품납품 서비스로 전달(연계)된다. (Async-Policy)
+```
+    http GET http://localhost:8083/goodsdelivery/1
+```
+  - 조달업체담당자는 검사검수요청서를 등록한다. (Command-PATCH)
+```
+    http PATCH http://localhost:8083/goodsdelivery/1 procNo=p01 companyPhoneNo=010-1234-1234
+    http GET http://localhost:8083/goodsdelivery/1
+```
+  - 검사검수요청서가 납품요구 서비스로 전달(연계)된다. (Async-Policy)
+```
+    http GET http://localhost:8082/inspectionresult/1
+```
+  - 수요기관담당자는 검사검수요청서에 검사결과를 갱신한다. (Command-PATCH)
+```
+    http PATCH http://localhost:8082/inspectionresult/1 procNo=p01 inspectionSuccFlag=true
+    http GET http://localhost:8082/inspectionresult/1
+```
+  - 검사결과가 notifaction 서비스로 전달(연계)된다. (Async-Policy)
+```
+    http GET http://localhost:8085/notification/1
+```
+  - 검사결과가 갱신되면 납품관리 서비스에 검사결과 정보가 갱신(공지)된다. (Sync-Req/Res)
+```
+    http GET http://localhost:8081/procurementmanagement/1
+```
+  - 납품관리 서비스 Down 시 납품요구 서비스의 검사결과 갱신도 실패한다. (Sync-Req/Res)
+```
+    http PATCH http://localhost:8082/inspectionresult/1 procNo=p01 inspectionSuccFlag=true
+```
+  - mypage 서비스에서 납품현황을 조회한다. (CQRS)
+```
+http GET localhost:8084/deliveryStatusInquiries
+```
+  - gateway-납품현황조회(Gateway 8088포트로 진입점 통일)
+```
+http GET localhost:8088/deliveryStatusInquiries
+```
 
 
 ## 폴리글랏 퍼시스턴스
