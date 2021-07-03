@@ -57,7 +57,7 @@
 • 조달업체담당자는 검사검수요청서를 등록한다.
 • 검사검수요청서가 납품요구 서비스로 전달(연계)된다.
 • 수요기관담당자는 검사검수요청서에 검사결과를 갱신한다.
-• 검사결과가 갱신되면 납품관리 서비스에 검사결과 정보가 갱신(공지)된다.
+• 검사결과가 갱신되면 납품관리 서비스에 검사결과 정보가 공지(갱신)된다.
 • 수요기관담당자는 조달요청을 취소 할 수 있다.
 • 조달요청이 취소되면 납품요구, 검사요청, 검사결과도 취소된다.
 • 검사결과 정보 등록 시 조달업체 담당자에게 SMS를 발송한다.
@@ -170,7 +170,7 @@ CQRS - mypage
 1) 수요기관담당자는 조달요청서를 등록한다. 조달요청서는 납품관리 서비스로 전달(연계)된다.
 2) 조달청담당자는 조달요청서에 납품요구서 정보를 갱신한다. 납품요구 서가 물품납품 서비스로 전달(연계)된다.
 3) 조달업체담당자는 검사검수요청서를 등록한다. 검사검수요청서가 납품요구 서비스로 전달(연계)된다.
-4) 수요기관담당자는 검사검수요청서에 검사결과를 갱신한다. 검사결과가 갱신되면 납품관리 서비스에 검사결과 정보가 갱신(공지)된다.
+4) 수요기관담당자는 검사검수요청서에 검사결과를 갱신한다. 검사결과가 갱신되면 납품관리 서비스에 검사결과 정보가 공지(갱신)된다.
 ```
 
 
@@ -195,7 +195,7 @@ CQRS - mypage
 
 ```
 1. 트랜잭션
-  - 검사결과가 등록되면 납품관리 서비스에 검사결과 정보가 등록되어야 한다. (Sync 호출)
+  - 검사결과가 등록되면 납품관리 서비스에 검사결과 정보가 공지(갱신)되어야 한다. (Sync 호출)
 2. 장애격리
   - 물품납품 서비스가 동작되지 않더라도 납품요구, 납품관리 서비스는 365일 24시간 받을 수 있어야 한다. Async (event-driven), Eventual Consistency
   - 납품요구 서비스가 과중되면 사용자를 잠시 동안 받지 않고 납품요구를 잠시 후에 하도록 유도한다. Circuit breaker, fallback
@@ -376,7 +376,7 @@ public interface InspectionResultRepository extends PagingAndSortingRepository<I
 ```
 ![image](https://user-images.githubusercontent.com/84000959/124301154-60c67f00-db9a-11eb-9607-ac5a10e88a5f.png)
 
-  - 납품요구 서가 물품납품 서비스로 전달(연계)된다. (Async-Policy)
+  - 납품요구서가 물품납품 서비스로 전달(연계)된다. (Async-Policy)
 ```
     http GET http://localhost:8083/goodsdeliveries/1
 ```
@@ -408,7 +408,7 @@ public interface InspectionResultRepository extends PagingAndSortingRepository<I
 ```
 ![image](https://user-images.githubusercontent.com/84000959/124303719-ba7c7880-db9d-11eb-88e4-3e86e8036459.png)
 
-  - 검사결과가 갱신되면 납품관리 서비스에 검사결과 정보가 갱신(공지)된다. (Sync-Req/Res)
+  - 검사결과가 갱신되면 납품관리 서비스에 검사결과 정보가 공지(갱신)된다. (Sync-Req/Res)
 ```
     http GET http://localhost:8081/deliverymanagements/1
 ```
@@ -459,9 +459,9 @@ http GET localhost:8088/deliveryStatusInquiries
 
 ## 동기식 호출 과 Fallback 처리
 
-분석단계에서의 조건 중 하나로 검사결과등록(납품요구)->검사결과갱신(납품관리) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다. 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 한다. 
+분석단계에서의 조건 중 하나로 검사결과등록(납품요구)->검사결과공지(납품관리) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다. 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 한다.
 
-- (동기호출-Req)검사결과갱신 서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현 
+- (동기호출-Req)검사결과공지 서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현 
 ```
 # DeliverymanagementService.java
 package procurement.external;
@@ -501,7 +501,7 @@ feign:
     enabled: true
 ```
 
-- (동기호출-Res) 검사결과갱신 서비스 (정상 호출)
+- (동기호출-Res) 검사결과공지 서비스 (정상 호출)
 ```
 # DeliverymanagementController.java
 package procurement;
@@ -539,7 +539,7 @@ package procurement;
  }
 ```
 
-- (동기호출-PostUpdate) 검사결과가신된 직후(@PostUpdate) 낙찰자정보 등록을 요청하도록 처리 (낙찰자가 아닌 경우, 이후 로직 스킵)
+- (동기호출-PostUpdate) 검사결과가 갱신된 직후(@PostUpdate) 검사결과 공지를 요청하도록 처리 (검사 성공이 아닌 경우, 이후 로직 스킵)
 ```
 # BiddingExamination.java (Entity)
 
@@ -549,7 +549,7 @@ package procurement;
         //Following code causes dependency to external APIs
         // it is NOT A GOOD PRACTICE. instead, Event-Policy mapping is recommended.
 
-        // 검수 성공이 아니면 Skip.
+        // 검사 성공이 아니면 Skip.
         if(getInspectionSuccFlag() == false) return;
 
         try{
@@ -558,7 +558,7 @@ package procurement;
             .announceInspectionResult(getProcNo(), getCompanyNo(), getCompanyNm(), getInspectionSuccFlag());
 
             if(isUpdated == false){
-                throw new Exception("납품관리 서비스의 검사공고에 검사결과 정보가 갱신되지 않음");
+                throw new Exception("납품관리 서비스에 검사결과 정보가 공지되지 않음");
             }
         }catch(java.net.ConnectException ce){
             throw new Exception("납품관리 서비스 연결 실패");
@@ -568,20 +568,20 @@ package procurement;
     }
 ```
 
-- (동기호출-테스트) 동기식 호출에서는 호출 시간에 따른 타임 커플링이 발생하며, 입찰관리 시스템이 장애가 나면 입찰심사 등록도 못 한다는 것을 확인:
+- (동기호출-테스트) 동기식 호출에서는 호출 시간에 따른 타임 커플링이 발생하며, 납품관리 시스템이 장애가 나면 검사결과 등록도 못 한다는 것을 확인:
 
 ```
-# 입찰관리(BiddingManagement) 서비스를 잠시 내려놓음 (ctrl+c)
+# 납품관리(deliverymanagement) 서비스를 잠시 내려놓음 (ctrl+c)
 
-#심사결과 등록 : Fail
-http PATCH http://localhost:8083/biddingExaminations/1 noticeNo=n01 participateNo=p01 successBidderFlag=true
+#검사결과 등록(PATCH) : Fail
+http PATCH http://localhost:8082/inspectionresults/1 procNo=p01 inspectionSuccFlag=true
 
-#입찰관리 서비스 재기동
-cd BiddingManagement
+#납품관리 서비스 재기동
+cd procurementmanagement
 mvn spring-boot:run
 
-#심사결과 등록 : Success
-http PATCH http://localhost:8083/biddingExaminations/1 noticeNo=n01 participateNo=p01 successBidderFlag=true
+#검사결과 등록(PATCH) : Success
+http PATCH http://localhost:8082/inspectionresults/1 procNo=p01 inspectionSuccFlag=true
 ```
 
 - 또한 과도한 요청시에 서비스 장애가 도미노 처럼 벌어질 수 있다. (서킷브레이커, 폴백 처리는 운영단계에서 설명한다.)
@@ -592,85 +592,78 @@ http PATCH http://localhost:8083/biddingExaminations/1 noticeNo=n01 participateN
 ## 비동기식 호출 / 시간적 디커플링 / 장애격리 / 최종 (Eventual) 일관성 테스트
 
 
-입찰공고가 등록된 후에 입찰참여 시스템에 알려주는 행위는 동기식이 아니라 비 동기식으로 처리하여 입찰참여 시스템의 처리를 위하여 입찰공고 트랜잭션이 블로킹 되지 않도록 처리한다.
+납품요구 서비스에 조달요청 등록된 후에 납품관리 서비스에 알려주는 행위는 동기식이 아니라 비 동기식으로 처리하여 데이터 연계를 위하여 조달요청 트랜잭션이 블로킹 되지 않도록 처리한다.
  
 - (Publish) 이를 위하여 입찰공고 기록을 남긴 후에 곧바로 등록 되었다는 도메인 이벤트를 카프카로 송출한다(Publish)
  
 ```
-@Entity
-@Table(name="BiddingManagement_table")
-public class BiddingManagement {
-
- ...
     @PostPersist
     public void onPostPersist(){
-        NoticeRegistered noticeRegistered = new NoticeRegistered();
-        BeanUtils.copyProperties(this, noticeRegistered);
-        noticeRegistered.publishAfterCommit();
+        ProcurementRequestPosted procurementRequestPosted = new ProcurementRequestPosted();
+        BeanUtils.copyProperties(this, procurementRequestPosted);
+        procurementRequestPosted.publishAfterCommit();
+
     }
 ```
-- (Subscribe-등록) 입찰참여 서비스에서는 입찰공고 등록됨 이벤트를 수신하면 입찰공고 번호를 등록하는 정책을 처리하도록 PolicyHandler를 구현한다:
+- (Subscribe-등록) 납품관리 서비스에서는 조달요청 등록 이벤트를 수신하면 조달요청 정보를 등록하는 정책을 처리하도록 PolicyHandler를 구현한다:
 
 ```
-@Service
-public class PolicyHandler{
-
     @StreamListener(KafkaProcessor.INPUT)
-    public void wheneverNoticeRegistered_RecieveBiddingNotice(@Payload NoticeRegistered noticeRegistered){
+    public void wheneverProcurementRequestPosted_ReceiveProcurementRequest(@Payload ProcurementRequestPosted procurementRequestPosted){
 
-        if(!noticeRegistered.validate()) return;
+        if(!procurementRequestPosted.validate()) return;
 
-        if(noticeRegistered.isMe()){
-            BiddingParticipation biddingParticipation = new BiddingParticipation();
-            biddingParticipation.setNoticeNo(noticeRegistered.getNoticeNo());
+        System.out.println("\n\n##### listener ReceiveProcurementRequest : " + procurementRequestPosted.toJson() + "\n\n");
 
-            biddingParticipationRepository.save(biddingParticipation);
-        }
+        Deliverymanagement deliverymanagement = new Deliverymanagement();
+        deliverymanagement.setProcNo(procurementRequestPosted.getProcNo());
+        deliverymanagement.setProcTitle(procurementRequestPosted.getProcTitle());
+        deliverymanagement.setProcContents(procurementRequestPosted.getProcContents());
+        deliverymanagement.setProcPrice(procurementRequestPosted.getProcPrice());
+        deliverymanagement.setProcAgency(procurementRequestPosted.getProcAgency());
+        deliverymanagement.setProcQty(procurementRequestPosted.getProcQty());
+
+        deliverymanagementRepository.save(deliverymanagement);
     }
-
 ```
-- (Subscribe-취소) 입찰참여 서비스에서는 입찰공고가 취소됨 이벤트를 수신하면 입찰참여 정보를 삭제하는 정책을 처리하도록 PolicyHandler를 구현한다:
+- (Subscribe-취소) 납품관리 서비스에서는 조달요청 등록이 취소됨 이벤트를 수신하면 조달요청 정보를 삭제하는 정책을 처리하도록 PolicyHandler를 구현한다:
   
 ```
-@Service
-public class PolicyHandler{
-    @Autowired BiddingParticipationRepository biddingParticipationRepository;
-
     @StreamListener(KafkaProcessor.INPUT)
-    public void wheneverNoticeCanceled_CancelBiddingParticipation(@Payload NoticeCanceled noticeCanceled){
+    public void wheneverProcurementRequestCanceled_CancelProcurementNotice(@Payload ProcurementRequestCanceled procurementRequestCanceled){
 
-        if(!noticeCanceled.validate()) return;
+        if(!procurementRequestCanceled.validate()) return;
 
-        if(noticeCanceled.isMe()){
-            BiddingParticipation biddingParticipation = biddingParticipationRepository.findByNoticeNo(noticeCanceled.getNoticeNo());
-            biddingParticipationRepository.delete(biddingParticipation);
-        }
-            
+        Deliverymanagement deliverymanagement = deliverymanagementRepository.findByProcNo(procurementRequestCanceled.getProcNo());
+        
+        deliverymanagementRepository.delete(deliverymanagement);
     }
-
 ```
 
-- (장애격리) 입찰관리, 입찰참여 시스템은 입찰심사 시스템과 완전히 분리되어 있으며, 이벤트 수신에 따라 처리되기 때문에, 입찰심사 시스템이 유지보수로 인해 잠시 내려간 상태라도 입찰관리, 입찰참여 서비스에 영향이 없다:
+- (장애격리) 납품요구, 납품관리 서비스는 물품납품 서비스와 완전히 분리되어 있으며, 이벤트 수신에 따라 처리되기 때문에, 물품납품 서비스가 유지보수로 인해 잠시 내려간 상태라도 납품요구, 납품관리 서비스에 영향이 없다:
 ```
-# 입찰심사 서비스 (BiddingExamination) 를 잠시 내려놓음 (ctrl+c)
+# 물품납품 서비스를 잠시 내려놓음 (ctrl+c)
 
-#입찰공고 등록 : Success
-http POST localhost:8081/biddingManagements noticeNo=n33 title=title33
-#입찰참여 등록 : Success
-http PATCH http://localhost:8082/biddingParticipations/2 noticeNo=n33 participateNo=p33 companyNo=c33 companyNm=doremi33 phoneNumber=010-1234-1234
+# 조달요청서 등록 : Success
+http POST localhost:8082/deliveryrequests procNo=p01 procTitle=title01
+#조달요청서에 납품요구서 정보를 갱신 : Success
+http PATCH http://localhost:8081/deliverymanagements/1 procNo=p01 companyNo=c01 companyNm=redbull
 
-#입찰관리에서 낙찰업체명 갱신 여부 확인
-http localhost:8081/biddingManagements/2     # 낙찰업체명 갱신 안 됨 확인
+#납품관리에서 검사결과 갱신 여부 확인
+http GET http://localhost:8081/deliverymanagements/1     # 검사결과 갱신 안 됨 확인
 
-#입찰심사 서비스 기동
-cd BiddingExamination
+#물품납품 서비스 기동
+cd goodsdelivery
 mvn spring-boot:run
 
-#심사결과 등록 : Success
-http PATCH http://localhost:8083/biddingExaminations/2 noticeNo=n33 participateNo=p33 successBidderFlag=true
+#검사요청 등록 : Success
+http PATCH http://localhost:8083/goodsdeliveries/1 procNo=p01 companyPhoneNo=010-1234-1234
 
-#입찰관리에서 낙찰업체명 갱신 여부 확인
-http localhost:8081/biddingManagements/2     # 낙찰업체명 갱신됨 확인
+#검사결과 등록 : Success
+http PATCH http://localhost:8082/inspectionresults/1 procNo=p01 inspectionSuccFlag=true
+
+#납품관리에서 검사결과 갱신 여부 확인
+http GET http://localhost:8081/deliverymanagements/1     # 검사결과 갱신됨 확인
 ```
 
 # 운영:
@@ -681,37 +674,33 @@ http localhost:8081/biddingManagements/2     # 낙찰업체명 갱신됨 확인
 
 - GitHub 와 연결 후 로컬빌드를 진행 진행
 ```
-	cd team
-	mkdir sourcecode
-	cd sourcecode
-	git clone --recurse-submodules https://github.com/21-2-1team/bidding03.git
+	git clone --recurse-submodules https://github.com/na7149/procurement.git
 	
-	cd bidding
-	cd BiddingExamination
+	cd procurement
+	
+	cd procurementrequest
 	mvn package
 	
-	cd ../BiddingManagement
+	cd ../procurementmanagement
 	mvn package
 	
-	cd ../BiddingParticipation
+	cd ../goodsdelivery
 	mvn package
 	
-	cd ../MyPage
+	cd ../mypage
 	mvn package
-	
-	
-	cd ../Notification
+		
+	cd ../notification
 	mvn package
-	
-	
+		
 	cd ../gateway
         mvn package
 ```
 - namespace 등록 및 변경
 ```
-kubectl config set-context --current --namespace=bidding  --> bidding namespace 로 변경
+kubectl config set-context --current --namespace=procurement  --> procurement namespace 로 변경
 
-kubectl create ns bidding
+kubectl create ns procurement
 ```
 
 - ACR 컨테이너이미지 빌드
