@@ -126,14 +126,14 @@ CQRS - mypage
 
 ### 액터, 커맨드 부착하여 읽기 좋게
 
-![image](https://user-images.githubusercontent.com/84000959/124289285-1ab6ee80-db8d-11eb-802e-723c4b54c776.png)
+![image](https://user-images.githubusercontent.com/84000959/124344035-103b3a00-dc0b-11eb-8f1a-ddbed796161c.png)
 
 
 
 
 ### 어그리게잇으로 묶기
 
-![image](https://user-images.githubusercontent.com/84000959/124289322-230f2980-db8d-11eb-8767-a8b7b4fd67b0.png)
+![image](https://user-images.githubusercontent.com/84000959/124344023-f7328900-dc0a-11eb-8100-52e34b4fb379.png)
 
 ```
 - 납품요구, 납품관리, 물품납품은 그와 연결된 command 와 event 들에 의하여 트랜잭션이 유지되어야 하는 단위로 그들 끼리 묶어줌
@@ -144,7 +144,7 @@ CQRS - mypage
 
 ### 바운디드 컨텍스트로 묶기
 
-![image](https://user-images.githubusercontent.com/84000959/124289379-3621f980-db8d-11eb-8f35-e7bc5bdd9ca2.png)
+![image](https://user-images.githubusercontent.com/84000959/124344029-01ed1e00-dc0b-11eb-8fc4-b9adac6526cf.png)
 
 ```
 도메인 서열 분리
@@ -436,7 +436,7 @@ http GET localhost:8088/deliveryStatusInquiries
 
 ## 폴리글랏 퍼시스턴스
 
-(H2DB, HSQLDB 사용) Notification(문자알림) 서비스는 문자알림 이력이 많이 쌓일 수 있으므로 자바로 작성된 관계형 데이터베이스인 HSQLDB를 사용하기로 하였다. 이를 위해 pom.xml 파일에 아래 설정을 추가하였다.
+(H2DB, HSQLDB 사용) notification(문자알림) 서비스는 문자알림 이력이 많이 쌓일 수 있으므로 자바로 작성된 관계형 데이터베이스인 HSQLDB를 사용하기로 하였다. 이를 위해 pom.xml 파일에 아래 설정을 추가하였다.
 
 ```
 # pom.xml
@@ -446,9 +446,9 @@ http GET localhost:8088/deliveryStatusInquiries
 	<scope>runtime</scope>
 </dependency>
 ```
-![image](https://user-images.githubusercontent.com/84000959/122328060-e7a81480-cf69-11eb-9955-954f88b7ec1b.png)
+![image](https://user-images.githubusercontent.com/84000959/124303719-ba7c7880-db9d-11eb-88e4-3e86e8036459.png)
 
-- 입찰관리, 입찰참여, 입찰심사 등 나머지 서비스는 H2 DB를 사용한다.
+- 납품요구, 납품관리, 물품납품 등 나머지 서비스는 H2 DB를 사용한다.
 ```
 <dependency>
 	<groupId>com.h2database</groupId>
@@ -459,35 +459,36 @@ http GET localhost:8088/deliveryStatusInquiries
 
 ## 동기식 호출 과 Fallback 처리
 
-분석단계에서의 조건 중 하나로 심사결과등록(입찰심사)->낙찰자정보등록(입찰관리) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다. 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 한다. 
+분석단계에서의 조건 중 하나로 검사결과등록(납품요구)->검사결과갱신(납품관리) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다. 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 한다. 
 
-- (동기호출-Req)낙찰자정보 등록 서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현 
+- (동기호출-Req)검사결과갱신 서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현 
 ```
-# (BiddingExamination) BiddingManagementService.java
-package bidding.external;
+# DeliverymanagementService.java
+package procurement.external;
 
-@FeignClient(name="BiddingManagement", url="http://${api.url.bidding}:8080", fallback=BiddingManagementServiceFallback.class)
-public interface BiddingManagementService {
-
-    @RequestMapping(method= RequestMethod.GET, path="/biddingManagements/registSucessBidder")
-    public boolean registSucessBidder(@RequestParam("noticeNo") String noticeNo,
-    @RequestParam("succBidderNm") String succBidderNm, @RequestParam("phoneNumber") String phoneNumber);
+// @FeignClient(name="procurementmanagement", url="http://${api.url.bidding}:8080", fallback=DeliverymanagementServiceFallback.class)
+@FeignClient(name="procurementmanagement", url="http://localhost:8081", fallback=DeliverymanagementServiceFallback.class)
+public interface DeliverymanagementService {
+    
+    @RequestMapping(method= RequestMethod.GET, path="/deliverymanagements/announceInspectionResult")
+    public boolean announceInspectionResult(@RequestParam("procNo") String procNo, @RequestParam("companyNo") String companyNo, 
+    @RequestParam("companyNm") String companyNm, @RequestParam("inspectionSuccFlag") Boolean inspectionSuccFlag);
 
 }
 ```
 
-- (Fallback) 낙찰자정보 등록 서비스가 정상적으로 호출되지 않을 경우 Fallback 처리
+- (Fallback) 검사결과갱신 서비스가 정상적으로 호출되지 않을 경우 Fallback 처리
 ```
-# (BiddingExamination) BiddingManagementServiceFallback.java
-package bidding.external;
+package procurement.external;
 
 import org.springframework.stereotype.Component;
 
 @Component
-public class BiddingManagementServiceFallback implements BiddingManagementService{
+public class DeliverymanagementServiceFallback implements DeliverymanagementService{
 
     @Override
-    public boolean registSucessBidder(String noticeNo,String succBidderNm, String phoneNumber){
+    public boolean announceInspectionResult(String procNo,String companyNo, String companyNm, Boolean inspectionSuccFlag){
+        
         System.out.println("★★★★★★★★★★★Circuit breaker has been opened. Fallback returned instead.★★★★★★★★★★★");
         return false;
     }
@@ -500,32 +501,34 @@ feign:
     enabled: true
 ```
 
-- (동기호출-Res) 낙찰자자정보 등록 서비스 (정상 호출)
+- (동기호출-Res) 검사결과갱신 서비스 (정상 호출)
 ```
-# (BiddingManagement) BiddingManagementController.java
-package bidding;
+# DeliverymanagementController.java
+package procurement;
 
  @RestController
- public class BiddingManagementController {
-
+ public class DeliverymanagementController {
     @Autowired
-    BiddingManagementRepository biddingManagementRepository;
+    DeliverymanagementRepository deliverymanagementRepository;
 
-    @RequestMapping(value = "/biddingManagements/registSucessBidder",
+    @RequestMapping(value = "/deliverymanagements/announceInspectionResult",
        method = RequestMethod.GET,
        produces = "application/json;charset=UTF-8")
-    public boolean registSucessBidder(HttpServletRequest request, HttpServletResponse response) {
+    public boolean announceInspectionResult(HttpServletRequest request, HttpServletResponse response) {
        boolean status = false;
 
-       String noticeNo = String.valueOf(request.getParameter("noticeNo"));
+       String procNo = String.valueOf(request.getParameter("procNo"));
        
-       BiddingManagement biddingManagement = biddingManagementRepository.findByNoticeNo(noticeNo);
+       System.out.println("@@@@@@@@@@@@@@@@@companyNm@" + request.getParameter("companyNm"));
+       
+       Deliverymanagement deliverymanagement = deliverymanagementRepository.findByProcNo(procNo);
 
-       if(biddingManagement.getDemandOrgNm() == null || "조달청".equals(biddingManagement.getDemandOrgNm()) == false){
-            biddingManagement.setSuccBidderNm(request.getParameter("succBidderNm"));
-            biddingManagement.setPhoneNumber(request.getParameter("phoneNumber"));
+        if(deliverymanagement.getProcAgency() == null || "조달청".equals(deliverymanagement.getProcAgency()) == false){
+            deliverymanagement.setCompanyNo(request.getParameter("companyNo"));
+            deliverymanagement.setCompanyNm(request.getParameter("companyNm"));
+            deliverymanagement.setInspectionSuccFlag(Boolean.parseBoolean(request.getParameter("inspectionSuccFlag")));
 
-            biddingManagementRepository.save(biddingManagement);
+            deliverymanagementRepository.save(deliverymanagement);
 
             status = true;
        }
@@ -536,28 +539,33 @@ package bidding;
  }
 ```
 
-- (동기호출-PostUpdate) 심사결과가 등록된 직후(@PostUpdate) 낙찰자정보 등록을 요청하도록 처리 (낙찰자가 아닌 경우, 이후 로직 스킵)
+- (동기호출-PostUpdate) 검사결과가신된 직후(@PostUpdate) 낙찰자정보 등록을 요청하도록 처리 (낙찰자가 아닌 경우, 이후 로직 스킵)
 ```
 # BiddingExamination.java (Entity)
 
     @PostUpdate
-    public void onPostUpdate(){
-        // 낙찰업체가 아니면 Skip.
-        if(getSuccessBidderFlag() == false) return;
+    public void onPostUpdate() throws Exception{
+
+        //Following code causes dependency to external APIs
+        // it is NOT A GOOD PRACTICE. instead, Event-Policy mapping is recommended.
+
+        // 검수 성공이 아니면 Skip.
+        if(getInspectionSuccFlag() == false) return;
 
         try{
             // mappings goes here
-            boolean isUpdated = BiddingExaminationApplication.applicationContext.getBean(bidding.external.BiddingManagementService.class)
-            .registSucessBidder(getNoticeNo(), getCompanyNm(), getPhoneNumber());
+            boolean isUpdated = ProcurementrequestApplication.applicationContext.getBean(procurement.external.DeliverymanagementService.class)
+            .announceInspectionResult(getProcNo(), getCompanyNo(), getCompanyNm(), getInspectionSuccFlag());
 
             if(isUpdated == false){
-                throw new Exception("입찰관리 서비스의 입찰공고에 낙찰자 정보가 갱신되지 않음");
+                throw new Exception("납품관리 서비스의 검사공고에 검사결과 정보가 갱신되지 않음");
             }
         }catch(java.net.ConnectException ce){
-            throw new Exception("입찰관리 서비스 연결 실패");
+            throw new Exception("납품관리 서비스 연결 실패");
         }catch(Exception e){
-            throw new Exception("입찰관리 서비스 처리 실패");
+            throw new Exception("납품관리 서비스 처리 실패");
         }
+    }
 ```
 
 - (동기호출-테스트) 동기식 호출에서는 호출 시간에 따른 타임 커플링이 발생하며, 입찰관리 시스템이 장애가 나면 입찰심사 등록도 못 한다는 것을 확인:
