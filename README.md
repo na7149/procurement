@@ -416,7 +416,7 @@ public interface InspectionResultRepository extends PagingAndSortingRepository<I
 
   - 납품관리 서비스 Down 시 납품요구 서비스의 검사결과 갱신도 실패한다. (Sync-Req/Res)
 ```
-    http PATCH http://localhost:8082/inspectionresults/1 procNo=p01 inspectionSuccFlag=true
+    http PATCH http://localhost:8082/inspectionresults/2 procNo=p01 inspectionSuccFlag=true
 ```
 ![image](https://user-images.githubusercontent.com/84000959/124302557-5311f900-db9c-11eb-9274-ed58471f98a0.png)
 
@@ -466,7 +466,6 @@ http GET localhost:8088/deliveryStatusInquiries
 # DeliverymanagementService.java
 package procurement.external;
 
-// @FeignClient(name="procurementmanagement", url="http://${api.url.bidding}:8080", fallback=DeliverymanagementServiceFallback.class)
 @FeignClient(name="procurementmanagement", url="http://localhost:8081", fallback=DeliverymanagementServiceFallback.class)
 public interface DeliverymanagementService {
     
@@ -696,78 +695,6 @@ http GET http://localhost:8081/deliverymanagements/1     # 검사결과 갱신�
 	cd ../gateway
         mvn package
 ```
-- namespace 등록 및 변경
-```
-kubectl config set-context --current --namespace=procurement  --> procurement namespace 로 변경
-
-kubectl create ns procurement
-```
-
-- ACR 컨테이너이미지 빌드
-```
-az acr build --registry user01skccacr --image user01skccacr.azurecr.io/biddingexamination:latest .
-```
-![image](https://user-images.githubusercontent.com/70736001/122502677-096cce80-d032-11eb-96e7-84a8024ab45d.png)
-
-나머지 서비스에 대해서도 동일하게 등록을 진행함
-```
-az acr build --registry user01skccacr --image user01skccacr.azurecr.io/biddingmanagement:latest .
-az acr build --registry user01skccacr --image user01skccacr.azurecr.io/biddingparticipation:latest .
-az acr build --registry user01skccacr --image user01skccacr.azurecr.io/biddingparticipation:latest .
-az acr build --registry user01skccacr --image user01skccacr.azurecr.io/mypage:latest  .
-az acr build --registry user01skccacr --image user01skccacr.azurecr.io/notification:latest  .
-az acr build --registry user01skccacr --image user01skccacr.azurecr.io/gateway:latest .
-```
-
-- 배포진행
-
-1.bidding/BiddingExamination/kubernetes/deployment.yml 파일 수정 (BiddingManagement/BiddingParticipation/MyPage/Notification/gateway 동일)
-
-![image](https://user-images.githubusercontent.com/70736001/122512566-011d8f00-d044-11eb-8bd5-91d939f7ab1b.png)
-
-2.bidding/BiddingExamination/kubernetes/service.yaml 파일 수정 (BiddingManagement/BiddingParticipation/MyPage/Notification 동일)
-
-![image](https://user-images.githubusercontent.com/70736001/122512673-26aa9880-d044-11eb-8587-38f8cd261326.png)
-
-3.bidding/gateway/kubernetes/service.yaml 파일 수정
-
-![image](https://user-images.githubusercontent.com/70736001/122503123-da0a9180-d032-11eb-9283-224d7860c9c3.png)
-
-4. 배포작업 수행
-``` 
-	cd gateway/kubernetes
-	kubectl apply -f deployment.yml
-	kubectl apply -f service.yaml
-	
-	cd ../../BiddingExamination/kubernetes
-	kubectl apply -f deployment.yml
-	kubectl apply -f service.yaml
-	
-	cd ../../BiddingManagement/kubernetes
-	kubectl apply -f deployment.yml
-	kubectl apply -f service.yaml
-	
-	
-	cd ../../BiddingParticipation/kubernetes
-	kubectl apply -f deployment.yml
-	kubectl apply -f service.yaml
-	
-	
-	cd ../../MyPage/kubernetes
-	kubectl apply -f deployment.yml
-	kubectl apply -f service.yaml
-	
-	
-	cd ../../Notification/kubernetes
-	kubectl apply -f deployment.yml
-	kubectl apply -f service.yaml
-``` 
-
-5. 배포결과 확인
-``` 
-kubectl get all
-``` 
-![image](https://user-images.githubusercontent.com/70736001/122503307-2b1a8580-d033-11eb-83fc-63b0f2154e3b.png)
 
 - Kafka 설치
 ``` 
@@ -787,17 +714,85 @@ helm install --name my-kafka --namespace kafka incubator/kafka
 
 kubectl get all -n kafka
 ``` 
-설치 후 서비스 재기동
+
+- namespace 등록 및 변경
+```
+kubectl config set-context --current --namespace=procurement  --> procurement namespace 로 변경
+
+kubectl create ns procurement
+```
+
+- ACR 컨테이너이미지 빌드
+```
+az acr build --registry user01skccacr --image user01skccacr.azurecr.io/procurementrequest:v1 .
+```
+![image](https://user-images.githubusercontent.com/70736001/122502677-096cce80-d032-11eb-96e7-84a8024ab45d.png)
+
+나머지 서비스에 대해서도 동일하게 등록을 진행함
+```
+az acr build --registry user01skccacr --image user01skccacr.azurecr.io/procurementmanagement:v1 .
+az acr build --registry user01skccacr --image user01skccacr.azurecr.io/goodsdelivery:v1 .
+az acr build --registry user01skccacr --image user01skccacr.azurecr.io/mypage:v1  .
+az acr build --registry user01skccacr --image user01skccacr.azurecr.io/notification:v1  .
+az acr build --registry user01skccacr --image user01skccacr.azurecr.io/gateway:v1 .
+```
+
+- 배포진행
+
+1.procurement/procurementrequest/kubernetes/deployment.yml 파일 수정 (procurementmanagement/goodsdelivery/mypage/notification/gateway 동일)
+
+![image](https://user-images.githubusercontent.com/70736001/122512566-011d8f00-d044-11eb-8bd5-91d939f7ab1b.png)
+
+2.procurement/procurementrequest/kubernetes/service.yaml 파일 수정 (procurementmanagement/goodsdelivery/mypage/notification/gateway 동일)
+
+![image](https://user-images.githubusercontent.com/70736001/122512673-26aa9880-d044-11eb-8587-38f8cd261326.png)
+
+3.procurement/gateway/kubernetes/service.yaml 파일 수정
+
+![image](https://user-images.githubusercontent.com/70736001/122503123-da0a9180-d032-11eb-9283-224d7860c9c3.png)
+
+4. 배포작업 수행
+``` 
+	cd gateway/kubernetes
+	kubectl apply -f deployment.yml
+	kubectl apply -f service.yaml
+	
+	cd ../../procurementrequest/kubernetes
+	kubectl apply -f deployment.yml
+	kubectl apply -f service.yaml
+	
+	cd ../../procurementmanagement/kubernetes
+	kubectl apply -f deployment.yml
+	kubectl apply -f service.yaml
+	
+	cd ../../goodsdelivery/kubernetes
+	kubectl apply -f deployment.yml
+	kubectl apply -f service.yaml
+	
+	cd ../../mypage/kubernetes
+	kubectl apply -f deployment.yml
+	kubectl apply -f service.yaml
+	
+	cd ../../notification/kubernetes
+	kubectl apply -f deployment.yml
+	kubectl apply -f service.yaml
+``` 
+
+5. 배포결과 확인
+``` 
+kubectl get all
+``` 
+![image](https://user-images.githubusercontent.com/70736001/122503307-2b1a8580-d033-11eb-83fc-63b0f2154e3b.png)
 
 ## Autoscale (HPA)
 앞서 CB(Circuit breaker)는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
 
-- 리소스에 대한 사용량 정의(bidding/BiddingManagement/kubernetes/deployment.yml)
+- 리소스에 대한 사용량 정의(procurement/procurementrequest/kubernetes/deployment.yml)
 ![image](https://user-images.githubusercontent.com/70736001/122503960-49cd4c00-d034-11eb-8ab4-b322e7383cc0.png)
 
 - Autoscale 설정 (request값의 20%를 넘어서면 Replica를 10개까지 동적으로 확장)
 ```
-kubectl autoscale deployment biddingmanagement --cpu-percent=20 --min=1 --max=10
+kubectl autoscale deployment procurementrequest --cpu-percent=20 --min=1 --max=10
 ```
 
 - siege 생성 (로드제너레이터 설치)
@@ -817,7 +812,7 @@ EOF
 - 부하발생 (50명 동시사용자, 30초간 부하)
 ```
 kubectl exec -it pod/siege  -c siege -n bidding -- /bin/bash
-siege -c50 -t30S -v --content-type "application/json" 'http://52.231.8.61:8080/biddingManagements POST {"noticeNo":1,"title":"AAA"}'
+siege -c50 -t30S -v --content-type "application/json" 'http://xx.xx.xx.xx:8082/deliveryrequests POST {"procNo":pp01,"procTitle":"ppTitle"}'
 ```
 - 모니터링 (부하증가로 스케일아웃되어지는 과정을 별도 창에서 모니터링)
 ```
@@ -840,29 +835,51 @@ watch kubectl get al
 ## Config Map
 ConfigMap을 사용하여 변경가능성이 있는 설정을 관리
 
-- 입찰심사(BiddingExamination) 서비스에서 동기호출(Req/Res방식)로 연결되는 입찰관리(BiddingManagement) 서비스 url 정보 일부를 ConfigMap을 사용하여 구현
+- 납품요구(procurementrequest) 서비스에서 동기호출(Req/Res방식)로 연결되는 납품관리(procurementmanagement) 서비스 url 정보 일부를 ConfigMap을 사용하여 구현
 
 - 파일 수정
-  - 입찰심사 소스 (BiddingExamination/src/main/java/bidding/external/BiddingManagementService.java)
+  - 납품관리서비스 요청 소스 (procurement/procurementrequest/src/main/java/procurement/external/DeliverymanagementService.java)
 
-![image](https://user-images.githubusercontent.com/70736001/122505096-9dd93000-d036-11eb-91b7-0ec57b6e1b10.png)
+```
+package procurement.external;
+
+@FeignClient(name="procurementmanagement", url="http://${api.url.procurement}:8080", fallback=DeliverymanagementServiceFallback.class)
+public interface DeliverymanagementService {
+    
+    @RequestMapping(method= RequestMethod.GET, path="/deliverymanagements/announceInspectionResult")
+    public boolean announceInspectionResult(@RequestParam("procNo") String procNo, @RequestParam("companyNo") String companyNo, 
+    @RequestParam("companyNm") String companyNm, @RequestParam("inspectionSuccFlag") Boolean inspectionSuccFlag);
+
+}
+```
 
 - Yaml 파일 수정
-  - application.yml (BiddingExamination/src/main/resources/application.yml)
-  - deploy yml (BiddingExamination/kubernetes/deployment.yml)
-
-![image](https://user-images.githubusercontent.com/70736001/122505177-c5c89380-d036-11eb-91b3-f399547b50ff.png)
+  - application.yml (procurement/procurementrequest/src/main/resources/application.yml)
+```
+api:
+  url:
+    procurement: ${procurement-url}
+```
+  - deploy yml (procurement/procurementrequest/kubernetes/deployment.yml)
+```
+          env:
+            - name: procurement-url
+              valueFrom:
+                configMapKeyRef:
+                  name: procurement-cm
+                  key: url
+```
 
 - Config Map 생성 및 생성 확인
 ```
-kubectl create configmap bidding-cm --from-literal=url=BiddingManagement
+kubectl create configmap procurement-cm --from-literal=url=procurementrequest
 kubectl get cm
 ```
 
 ![image](https://user-images.githubusercontent.com/70736001/122505221-dc6eea80-d036-11eb-8757-b97f8d75baff.png)
 
 ```
-kubectl get cm bidding-cm -o yaml
+kubectl get cm procurement-cm -o yaml
 ```
 
 ![image](https://user-images.githubusercontent.com/70736001/122505270-f6103200-d036-11eb-8c96-513f95448989.png)
@@ -878,10 +895,11 @@ kubectl get pod
 쿠버네티스는 각 컨테이너의 상태를 주기적으로 체크(Health Check)해서 문제가 있는 컨테이너는 서비스에서 제외한다.
 
 - deployment.yml에 readinessProbe 설정 후 미설정 상태 테스트를 위해 주석처리함 
+  depolyment.yml(procurement/procurementrequest/kubernetes/deployment.yml)
 ```
 readinessProbe:
 httpGet:
-  path: '/biddingManagements'
+  path: '/deliveryrequests'
   port: 8080
 initialDelaySeconds: 10
 timeoutSeconds: 2
@@ -894,8 +912,8 @@ failureThreshold: 10
 ![image](https://user-images.githubusercontent.com/70736001/122505873-2906f580-d038-11eb-86b8-2f8388f82dd1.png)
 
 ```
-kubectl exec -it pod/siege  -c siege -n bidding -- /bin/bash
-siege -c100 -t5S -v --content-type "application/json" 'http://20.194.120.4:8080/biddingManagements POST {"noticeNo":1,"title":"AAA"}
+kubectl exec -it pod/siege  -c siege -n procurement -- /bin/bash
+siege -c100 -t5S -v --content-type "application/json" 'http://xx.xx.xx.xx:8080/deliveryrequests POST {"procNo":pp01,"procTitle":"ppTitle"}
 ```
 1.부하테스트 전
 
@@ -909,9 +927,9 @@ siege -c100 -t5S -v --content-type "application/json" 'http://20.194.120.4:8080/
 
 ![image](https://user-images.githubusercontent.com/70736001/122506129-a03c8980-d038-11eb-8822-5ec57926b900.png)
 
-- 정상 실행중인 biddingmanagement으로의 요청은 성공(201),비정상 적인 요청은 실패(503 - Service Unavailable) 확인
+- 정상 실행중인 pod로의 요청은 성공(201), 비정상적인 요청은 실패(503 - Service Unavailable) 확인
 
-- hpa 설정에 의해 target 지수 초과하여 biddingmanagement scale-out 진행됨
+- hpa 설정에 의해 target 지수 초과하여 pod scale-out 진행됨
 
 - deployment.yml에 readinessProbe 설정 후 부하발생 및 Availability 100% 확인
 
@@ -934,20 +952,17 @@ siege -c100 -t5S -v --content-type "application/json" 'http://20.194.120.4:8080/
 쿠버네티스는 각 컨테이너의 상태를 주기적으로 체크(Health Check)해서 문제가 있는 컨테이너는 자동으로재시작한다.
 
 - depolyment.yml 파일의 path 및 port를 잘못된 값으로 변경
-  depolyment.yml(BiddingManagement/kubernetes/deployment.yml)
+  depolyment.yml(procurement/procurementrequest/kubernetes/deployment.yml)
 ```
  livenessProbe:
     httpGet:
-        path: '/biddingmanagement/failed'
+        path: '/deliveryrequests/failed'
         port: 8090
       initialDelaySeconds: 30
       timeoutSeconds: 2
       periodSeconds: 5
       failureThreshold: 5
 ```
-
-
-
 
 ![image](https://user-images.githubusercontent.com/70736001/122506714-d75f6a80-d039-11eb-8bd0-223490797b58.png)
 
@@ -964,12 +979,12 @@ siege -c100 -t5S -v --content-type "application/json" 'http://20.194.120.4:8080/
 
 ## Circuit Breaker
 서킷 브레이킹 프레임워크의 선택: Spring FeignClient + Hystrix 옵션을 사용하여 구현함
-시나리오는 심사결과등록(입찰심사:BiddingExamination)-->낙찰자정보등록(입찰관리:BiddingManagement) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 낙찰자정보등록이 과도할 경우 CB 를 통하여 장애격리.
+시나리오는 검사결과등록(물품요구:procurementrequest)-->검사결과공지(물품관리:procurementmanagement) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 검사결과등록이 과도할 경우 CB 를 통하여 장애격리.
 
 
 - Hystrix 를 설정: 요청처리 쓰레드에서 처리시간이 1000ms가 넘어서기 시작하면 CB 작동하도록 설정
 
-**application.yml (BiddingExamination)**
+**application.yml (procurementrequest)**
 ```
 feign:
   hystrix:
@@ -980,10 +995,9 @@ hystrix:
     default:
       execution.isolation.thread.timeoutInMilliseconds: 1000
 ```
-![image](https://user-images.githubusercontent.com/70736001/122508631-3a9ecc00-d03d-11eb-9bce-a786225df40f.png)
 
-- 피호출 서비스(입찰관리:biddingmanagement) 의 임의 부하 처리 - 800ms에서 증감 300ms 정도하여 800~1100 ms 사이에서 발생하도록 처리
-BiddingManagementController.java
+- 피호출 서비스(납품관리:procurementmanagement) 의 임의 부하 처리 - 800ms에서 증감 300ms 정도하여 800~1100 ms 사이에서 발생하도록 처리
+DeliverymanagementController.java
 ```
 req/res를 처리하는 피호출 function에 sleep 추가
 
@@ -993,11 +1007,10 @@ req/res를 처리하는 피호출 function에 sleep 추가
 	   e.printStackTrace();
 	}
 ```
-![image](https://user-images.githubusercontent.com/70736001/122508689-5609d700-d03d-11eb-9e08-8eadc904d391.png)
 
 - req/res 호출하는 위치가 onPostUpdate에 있어 실제로 Data Update가 발생하지 않으면 호출이 되지 않는 문제가 있어 siege를 2개 실행하여 Update가 지속적으로 발생하게 처리 함
 ```
-siege -c2 –t20S  -v --content-type "application/json" 'http://20.194.120.4:8080/biddingExaminations/1 PATCH {"noticeNo":"n01","participateNo":"p01","successBidderFlag":"true"}'
-siege -c2 –t20S  -v --content-type "application/json" 'http://20.194.120.4:8080/biddingExaminations/1 PATCH {"noticeNo":"n01","participateNo":"p01","successBidderFlag":"false"}'
+siege -c2 –t20S  -v --content-type "application/json" 'http://xx.xx.xx.xx:8080/inspectionresults/2 PATCH {"procNo":"pp01","inspectionSuccFlag":"true"}'
+siege -c2 –t20S  -v --content-type "application/json" 'http://xx.xx.xx.xx:8080/inspectionresults/2 PATCH {"procNo":"pp01","inspectionSuccFlag":"false"}'
 ```
 ![image](https://user-images.githubusercontent.com/70736001/122508763-7b96e080-d03d-11eb-90f8-8380277cdc17.png)
