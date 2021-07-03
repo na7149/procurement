@@ -816,7 +816,7 @@ siege -c50 -t30S -v --content-type "application/json" 'http://xx.xx.xx.xx:8082/d
 ```
 - 모니터링 (부하증가로 스케일아웃되어지는 과정을 별도 창에서 모니터링)
 ```
-watch kubectl get al
+watch kubectl get all
 ```
 - 자동스케일아웃으로 Availablity 100% 결과 확인 (시간이 좀 흐른 후 스케일 아웃이 벌어지는 것을 확인, siege의 로그를 보아도 전체적인 성공률이 높아진 것을 확인함)
 
