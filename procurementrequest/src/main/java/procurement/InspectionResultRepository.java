@@ -6,7 +6,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 @RepositoryRestResource(collectionResourceRel="inspectionResults", path="inspectionResults")
 public interface InspectionResultRepository extends PagingAndSortingRepository<InspectionResult, Long>{
 
-    InspectionResult findByNoticeNo(String procNo);
+    InspectionResult findByProcNo(String procNo);
 
 
 }

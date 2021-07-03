@@ -80,3 +80,6 @@ spring:
         event-out:
           destination: procurement
           contentType: application/json
+api:
+  url:
+    procurement: ${procurement-url}

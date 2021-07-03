@@ -35,12 +35,12 @@ public class PolicyHandler{
 
         if(!procurementRequestCanceled.validate()) return;
         // Get Methods
-
+                           
 
         // Sample Logic //
         System.out.println("\n\n##### listener InspectionResultCanceled : " + procurementRequestCanceled.toJson() + "\n\n");
 
-        InspectionResult inspectionResult = inspectionResultRepository.findByNoticeNo(procurementRequestCanceled.getProcNo());
+        InspectionResult inspectionResult = inspectionResultRepository.findByProcNo(procurementRequestCanceled.getProcNo());
         
         inspectionResultRepository.delete(inspectionResult);
     }

@@ -19,14 +19,11 @@ public class InspectionResult {
 
     @PostUpdate
     public void onPostUpdate() throws Exception{
-        InspectionResultPatched inspectionResultPatched = new InspectionResultPatched();
-        BeanUtils.copyProperties(this, inspectionResultPatched);
-        inspectionResultPatched.publishAfterCommit();
 
         //Following code causes dependency to external APIs
         // it is NOT A GOOD PRACTICE. instead, Event-Policy mapping is recommended.
 
-        // 검수 성공이 아니면 Skip.
+        // 검사 성공이 아니면 Skip.
         if(getInspectionSuccFlag() == false) return;
 
         try{
@@ -35,7 +32,7 @@ public class InspectionResult {
             .announceInspectionResult(getProcNo(), getCompanyNo(), getCompanyNm(), getInspectionSuccFlag());
 
             if(isUpdated == false){
-                throw new Exception("납품관리 서비스의 검사공고에 검사결과 정보가 갱신되지 않음");
+                throw new Exception("납품관리 서비스에 검사결과 정보가 공지되지 않음");
             }
         }catch(java.net.ConnectException ce){
             throw new Exception("납품관리 서비스 연결 실패");
@@ -43,6 +40,9 @@ public class InspectionResult {
             throw new Exception("납품관리 서비스 처리 실패");
         }
 
+        InspectionResultPatched inspectionResultPatched = new InspectionResultPatched();
+        BeanUtils.copyProperties(this, inspectionResultPatched);
+        inspectionResultPatched.publishAfterCommit();
     }
     @PreUpdate
     public void onPreUpdate(){

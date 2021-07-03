@@ -1,0 +1,11 @@
+C:\Dev\vscode\procurement\procurementmanagement\src\main\java\procurement\PolicyHandler.java
+C:\Dev\vscode\procurement\procurementmanagement\src\main\java\procurement\DeliverymanagementController.java
+C:\Dev\vscode\procurement\procurementmanagement\src\main\java\procurement\ProcurementNoticeCanceled.java
+C:\Dev\vscode\procurement\procurementmanagement\src\main\java\procurement\ProcurementRequestCanceled.java
+C:\Dev\vscode\procurement\procurementmanagement\src\main\java\procurement\ProcurementRequestPosted.java
+C:\Dev\vscode\procurement\procurementmanagement\src\main\java\procurement\config\kafka\KafkaProcessor.java
+C:\Dev\vscode\procurement\procurementmanagement\src\main\java\procurement\ProcurementmanagementApplication.java
+C:\Dev\vscode\procurement\procurementmanagement\src\main\java\procurement\DeliverymanagementRepository.java
+C:\Dev\vscode\procurement\procurementmanagement\src\main\java\procurement\AbstractEvent.java
+C:\Dev\vscode\procurement\procurementmanagement\src\main\java\procurement\Deliverymanagement.java
+C:\Dev\vscode\procurement\procurementmanagement\src\main\java\procurement\DeliveryRequestPatched.java
