@@ -671,30 +671,72 @@ http GET http://localhost:8081/deliverymanagements/1     # 검사결과 갱신�
 
 ## Deploy
 
-- GitHub 와 연결 후 로컬빌드를 진행 진행
+- GitHub 에서 로컬로 소스 clone
 ```
-	git clone --recurse-submodules https://github.com/na7149/procurement.git
-	
-	cd procurement
-	
-	cd procurementrequest
-	mvn package
-	
-	cd ../procurementmanagement
-	mvn package
-	
-	cd ../goodsdelivery
-	mvn package
-	
-	cd ../mypage
-	mvn package
-		
-	cd ../notification
-	mvn package
-		
-	cd ../gateway
-        mvn package
+git clone --recurse-submodules https://github.com/na7149/procurement.git
 ```
+
+- azure login
+```
+az login
+
+az acr login --name procurementacr
+az aks get-credentials --resource-group procurement-rsrcgrp --name procurement-aks
+az acr show --name procurementacr --query loginServer --output table
+```
+
+- namespace 등록 및 변경
+```
+kubectl config set-context --current --namespace=procurement
+kubectl create ns procurement
+```
+
+- (필요시) 기존 delete svc,deployment 전체 삭제
+```
+kubectl delete svc,deployment --all
+kubectl get all
+watch kubectl get all
+```
+
+- 배포진행
+1.procurement/procurementrequest/kubernetes/deployment.yml 파일 수정 (procurementmanagement/goodsdelivery/mypage/notification/gateway 동일)
+
+![image](https://user-images.githubusercontent.com/84000959/124378584-25889500-dced-11eb-926e-5bbb4e42e7df.png)
+
+2.procurement/procurementrequest/kubernetes/service.yaml 파일 수정 (procurementmanagement/goodsdelivery/mypage/notification 동일)
+
+![image](https://user-images.githubusercontent.com/84000959/124378596-3507de00-dced-11eb-8c0a-e7a98f1804ce.png)
+
+3.procurement/gateway/kubernetes/service.yaml 파일 수정
+
+![image](https://user-images.githubusercontent.com/84000959/124378607-48b34480-dced-11eb-8730-674f13820ed5.png)
+
+
+- 각 서비스 폴더에서 ACR 컨테이너이미지 빌드 및 배포 (procurementmanagement/goodsdelivery/mypage/notification/gateway 동일)
+```
+cd procurementrequest
+mvn package
+az acr build --registry procurementacr --image procurementacr.azurecr.io/procurementrequest:v1 .
+cd kubernates
+kubectl apply -f deployment.yml
+kubectl apply -f service.yaml
+```
+
+- 나머지 서비스에 대해서도 동일하게 등록을 진행함
+```
+az acr build --registry procurementacr --image procurementacr.azurecr.io/procurementmanagement:v1 .
+az acr build --registry procurementacr --image procurementacr.azurecr.io/goodsdelivery:v1 .
+az acr build --registry procurementacr --image procurementacr.azurecr.io/mypage:v1  .
+az acr build --registry procurementacr --image procurementacr.azurecr.io/notification:v1  .
+az acr build --registry procurementacr --image procurementacr.azurecr.io/gateway:v1 .
+```
+
+- 배포결과 확인
+``` 
+kubectl get all
+``` 
+![image](https://user-images.githubusercontent.com/70736001/122503307-2b1a8580-d033-11eb-83fc-63b0f2154e3b.png)
+
 
 - Kafka 설치
 ``` 
@@ -714,101 +756,6 @@ helm install --name my-kafka --namespace kafka incubator/kafka
 
 kubectl get all -n kafka
 ``` 
-
-- azure login
-```
-az login
-
-az acr login --name procurementacr
-az aks get-credentials --resource-group procurement-rsrcgrp --name procurement-aks
-az acr show --name procurementacr --query loginServer --output table
-```
-
-- namespace 등록 및 변경
-```
-kubectl config set-context --current --namespace=procurement  --> procurement namespace 로 변경
-
-kubectl create ns procurement
-```
-
-- (필요시) 기존 delete svc,deployment 전체 삭제
-```
-kubectl delete svc,deployment --all
-kubectl get all
-watch kubectl get all
-```
-
-- 각 서비스 폴더에서 빌드 및 배포
-```
-cd procurementrequest
-mvn package
-az acr build --registry procurementacr --image procurementacr.azurecr.io/procurementrequest:v1 .
-cd kubernates
-kubectl apply -f deployment.yml
-kubectl apply -f service.yaml
-```
-
-- ACR 컨테이너이미지 빌드
-```
-az acr build --registry procurementacr --image procurementacr.azurecr.io/procurementrequest:v1 .
-```
-![image](https://user-images.githubusercontent.com/70736001/122502677-096cce80-d032-11eb-96e7-84a8024ab45d.png)
-
-나머지 서비스에 대해서도 동일하게 등록을 진행함
-```
-az acr build --registry user01skccacr --image user01skccacr.azurecr.io/procurementmanagement:v1 .
-az acr build --registry user01skccacr --image user01skccacr.azurecr.io/goodsdelivery:v1 .
-az acr build --registry user01skccacr --image user01skccacr.azurecr.io/mypage:v1  .
-az acr build --registry user01skccacr --image user01skccacr.azurecr.io/notification:v1  .
-az acr build --registry user01skccacr --image user01skccacr.azurecr.io/gateway:v1 .
-```
-
-- 배포진행
-
-1.procurement/procurementrequest/kubernetes/deployment.yml 파일 수정 (procurementmanagement/goodsdelivery/mypage/notification/gateway 동일)
-
-![image](https://user-images.githubusercontent.com/70736001/122512566-011d8f00-d044-11eb-8bd5-91d939f7ab1b.png)
-
-2.procurement/procurementrequest/kubernetes/service.yaml 파일 수정 (procurementmanagement/goodsdelivery/mypage/notification/gateway 동일)
-
-![image](https://user-images.githubusercontent.com/70736001/122512673-26aa9880-d044-11eb-8587-38f8cd261326.png)
-
-3.procurement/gateway/kubernetes/service.yaml 파일 수정
-
-![image](https://user-images.githubusercontent.com/70736001/122503123-da0a9180-d032-11eb-9283-224d7860c9c3.png)
-
-4. 배포작업 수행
-``` 
-	cd gateway/kubernetes
-	kubectl apply -f deployment.yml
-	kubectl apply -f service.yaml
-	
-	cd ../../procurementrequest/kubernetes
-	kubectl apply -f deployment.yml
-	kubectl apply -f service.yaml
-	
-	cd ../../procurementmanagement/kubernetes
-	kubectl apply -f deployment.yml
-	kubectl apply -f service.yaml
-	
-	cd ../../goodsdelivery/kubernetes
-	kubectl apply -f deployment.yml
-	kubectl apply -f service.yaml
-	
-	cd ../../mypage/kubernetes
-	kubectl apply -f deployment.yml
-	kubectl apply -f service.yaml
-	
-	cd ../../notification/kubernetes
-	kubectl apply -f deployment.yml
-	kubectl apply -f service.yaml
-``` 
-
-5. 배포결과 확인
-``` 
-kubectl get all
-``` 
-![image](https://user-images.githubusercontent.com/70736001/122503307-2b1a8580-d033-11eb-83fc-63b0f2154e3b.png)
 
 ## Autoscale (HPA)
 앞서 CB(Circuit breaker)는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
