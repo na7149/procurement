@@ -681,8 +681,13 @@ git clone --recurse-submodules https://github.com/na7149/procurement.git
 az login
 
 az acr login --name procurementacr
-az aks get-credentials --resource-group procurement-rsrcgrp --name procurement-aks
-az acr show --name procurementacr --query loginServer --output table
+az aks get-credentials --resource-group procurement-rsrcgrp --name proc-aks
+az acr show --name procacr --query loginServer --output table
+```
+
+- Azure AKS에 ACR Attach 설정
+```
+az aks update -n proc-aks -g procurement-rsrcgrp --attach-acr procacr
 ```
 
 - namespace 등록 및 변경
@@ -716,7 +721,7 @@ watch kubectl get all
 ```
 cd procurementrequest
 mvn package
-az acr build --registry procurementacr --image procurementacr.azurecr.io/procurementrequest:v1 .
+az acr build --registry procacr --image procacr.azurecr.io/procurementrequest:v1 .
 cd kubernates
 kubectl apply -f deployment.yml
 kubectl apply -f service.yaml
@@ -724,11 +729,11 @@ kubectl apply -f service.yaml
 
 - 나머지 서비스에 대해서도 동일하게 등록을 진행함
 ```
-az acr build --registry procurementacr --image procurementacr.azurecr.io/procurementmanagement:v1 .
-az acr build --registry procurementacr --image procurementacr.azurecr.io/goodsdelivery:v1 .
-az acr build --registry procurementacr --image procurementacr.azurecr.io/mypage:v1  .
-az acr build --registry procurementacr --image procurementacr.azurecr.io/notification:v1  .
-az acr build --registry procurementacr --image procurementacr.azurecr.io/gateway:v1 .
+az acr build --registry procacr --image procacr.azurecr.io/procurementmanagement:v1 .
+az acr build --registry procacr --image procacr.azurecr.io/goodsdelivery:v1 .
+az acr build --registry procacr --image procacr.azurecr.io/mypage:v1  .
+az acr build --registry procacr --image procacr.azurecr.io/notification:v1  .
+az acr build --registry procacr --image procacr.azurecr.io/gateway:v1 .
 ```
 
 - 배포결과 확인
