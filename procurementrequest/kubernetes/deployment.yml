@@ -18,8 +18,6 @@ spec:
       containers:
         - name: procurementrequest
           image: procurementacr.azurecr.io/procurementrequest:v2
-          imagePullSecrets:
-            - name: regcred
           ports:
             - containerPort: 8080
           env:
@@ -28,6 +26,8 @@ spec:
                 configMapKeyRef:
                   name: procurement-cm
                   key: url
+      imagePullSecrets:
+        - name: regcred
           #readinessProbe:
           #  httpGet:
           #    path: '/deliveryrequests'
