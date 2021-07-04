@@ -715,6 +715,15 @@ helm install --name my-kafka --namespace kafka incubator/kafka
 kubectl get all -n kafka
 ``` 
 
+- azure login
+```
+az login
+
+az acr login --name procurementacr
+az aks get-credentials --resource-group procurement-rsrcgrp --name procurement-aks
+az acr show --name procurementacr --query loginServer --output table
+```
+
 - namespace 등록 및 변경
 ```
 kubectl config set-context --current --namespace=procurement  --> procurement namespace 로 변경
@@ -722,9 +731,26 @@ kubectl config set-context --current --namespace=procurement  --> procurement na
 kubectl create ns procurement
 ```
 
+- (필요시) 기존 delete svc,deployment 전체 삭제
+```
+kubectl delete svc,deployment --all
+kubectl get all
+watch kubectl get all
+```
+
+- 각 서비스 폴더에서 빌드 및 배포
+```
+cd procurementrequest
+mvn package
+az acr build --registry procurementacr --image procurementacr.azurecr.io/procurementrequest:v1 .
+cd kubernates
+kubectl apply -f deployment.yml
+kubectl apply -f service.yaml
+```
+
 - ACR 컨테이너이미지 빌드
 ```
-az acr build --registry user01skccacr --image user01skccacr.azurecr.io/procurementrequest:v1 .
+az acr build --registry procurementacr --image procurementacr.azurecr.io/procurementrequest:v1 .
 ```
 ![image](https://user-images.githubusercontent.com/70736001/122502677-096cce80-d032-11eb-96e7-84a8024ab45d.png)
 
