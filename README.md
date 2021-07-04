@@ -706,7 +706,7 @@ watch kubectl get all
 - 배포진행
 1.procurement/procurementrequest/kubernetes/deployment.yml 파일 수정 (procurementmanagement/goodsdelivery/mypage/notification/gateway 동일)
 
-![image](https://user-images.githubusercontent.com/84000959/124378584-25889500-dced-11eb-926e-5bbb4e42e7df.png)
+![image](https://user-images.githubusercontent.com/84000959/124393125-ff3a1800-dd33-11eb-953a-09609bf2e4a1.png)
 
 2.procurement/procurementrequest/kubernetes/service.yaml 파일 수정 (procurementmanagement/goodsdelivery/mypage/notification 동일)
 
