@@ -17,7 +17,9 @@ spec:
     spec:
       containers:
         - name: procurementrequest
-          image: procurementacr.azurecr.io/procurementrequest:v1
+          image: procurementacr.azurecr.io/procurementrequest:v2
+          imagePullSecrets:
+            - name: regcred
           ports:
             - containerPort: 8080
           env:
