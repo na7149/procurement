@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: vs-procurementmanagement-network-rule
+  namespace: procurement
+spec:
+  hosts:
+  - procurementmanagement
+  http:
+  - fault:
+      delay:
+        percent: 15
+        fixedDelay: 5s
+    route:
+    - destination:
+        host: procurementmanagement

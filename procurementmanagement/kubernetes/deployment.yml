@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: procurementmanagement
+  namespace: procurement
   labels:
     app: procurementmanagement
 spec:
@@ -16,22 +17,27 @@ spec:
     spec:
       containers:
         - name: procurementmanagement
-          image: username/procurementmanagement:latest
+          image: procurementacr.azurecr.io/procurementmanagement:v1
           ports:
             - containerPort: 8080
+          resources:
+            limits:
+              cpu: 500m
+            requests:
+              cpu: 250m
           readinessProbe:
             httpGet:
-              path: '/actuator/health'
+              path: '/deliverymanagements'
               port: 8080
             initialDelaySeconds: 10
             timeoutSeconds: 2
             periodSeconds: 5
             failureThreshold: 10
-          livenessProbe:
-            httpGet:
-              path: '/actuator/health'
-              port: 8080
-            initialDelaySeconds: 120
-            timeoutSeconds: 2
-            periodSeconds: 5
-            failureThreshold: 5
+          #livenessProbe:
+          #  httpGet:
+          #    path: '/deliverymanagements/failed'
+          #    port: 8090
+          #  initialDelaySeconds: 30
+          #  timeoutSeconds: 2
+          #  periodSeconds: 5
+          #  failureThreshold: 5

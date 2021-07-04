@@ -83,3 +83,13 @@ spring:
 api:
   url:
     procurement: ${procurement-url}
+
+feign:
+  hystrix:
+    enabled: true
+
+hystrix:
+  command:
+    # 전역설정
+    default:
+      execution.isolation.thread.timeoutInMilliseconds: 1000

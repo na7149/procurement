@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: procurementrequest
+  namespace: procurement
   labels:
     app: procurementrequest
 spec:
@@ -16,7 +17,7 @@ spec:
     spec:
       containers:
         - name: procurementrequest
-          image: username/procurementrequest:latest
+          image: procurementacr.azurecr.io/procurementrequest:v1
           ports:
             - containerPort: 8080
           env:
@@ -25,19 +26,19 @@ spec:
                 configMapKeyRef:
                   name: procurement-cm
                   key: url
-          readinessProbe:
-            httpGet:
-              path: '/deliveryrequests'
-              port: 8080
-            initialDelaySeconds: 10
-            timeoutSeconds: 2
-            periodSeconds: 5
-            failureThreshold: 10
-          livenessProbe:
-            httpGet:
-              path: '/deliveryrequests/failed'
-              port: 8080
-            initialDelaySeconds: 120
-            timeoutSeconds: 2
-            periodSeconds: 5
-            failureThreshold: 5
+          #readinessProbe:
+          #  httpGet:
+          #    path: '/deliveryrequests'
+          #    port: 8080
+          #  initialDelaySeconds: 10
+          #  timeoutSeconds: 2
+          #  periodSeconds: 5
+          #  failureThreshold: 10
+          #livenessProbe:
+          #  httpGet:
+          #    path: '/deliveryrequests/failed'
+          #    port: 8080
+          #  initialDelaySeconds: 120
+          #  timeoutSeconds: 2
+          #  periodSeconds: 5
+          #  failureThreshold: 5

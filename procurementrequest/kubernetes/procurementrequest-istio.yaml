@@ -1,0 +1,13 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: vs-procurementrequest-network-rule
+  namespace: procurement
+spec:
+  hosts:
+  - procurementrequest
+  http:
+  - route:
+    - destination:
+        host: procurementrequest
+    timeout: 3s

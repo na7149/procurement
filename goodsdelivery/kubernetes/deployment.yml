@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: goodsdelivery
+  namespace: procurement
   labels:
     app: goodsdelivery
 spec:
@@ -16,22 +17,22 @@ spec:
     spec:
       containers:
         - name: goodsdelivery
-          image: username/goodsdelivery:latest
+          image: procurementacr.azurecr.io/goodsdelivery:v1
           ports:
             - containerPort: 8080
-          readinessProbe:
-            httpGet:
-              path: '/actuator/health'
-              port: 8080
-            initialDelaySeconds: 10
-            timeoutSeconds: 2
-            periodSeconds: 5
-            failureThreshold: 10
-          livenessProbe:
-            httpGet:
-              path: '/actuator/health'
-              port: 8080
-            initialDelaySeconds: 120
-            timeoutSeconds: 2
-            periodSeconds: 5
-            failureThreshold: 5
+          #readinessProbe:
+          #  httpGet:
+          #    path: '/goodsdeliveries'
+          #    port: 8080
+          #  initialDelaySeconds: 10
+          #  timeoutSeconds: 2
+          #  periodSeconds: 5
+          #  failureThreshold: 10
+          #livenessProbe:
+          #  httpGet:
+          #    path: '/goodsdeliveries'
+          #    port: 8080
+          #  initialDelaySeconds: 120
+          #  timeoutSeconds: 2
+          #  periodSeconds: 5
+          #  failureThreshold: 5

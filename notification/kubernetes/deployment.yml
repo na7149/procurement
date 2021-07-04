@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: notification
+  namespace: procurement
   labels:
     app: notification
 spec:
@@ -16,22 +17,22 @@ spec:
     spec:
       containers:
         - name: notification
-          image: username/notification:latest
+          image: procurementacr.azurecr.io/notification:v1
           ports:
             - containerPort: 8080
-          readinessProbe:
-            httpGet:
-              path: '/actuator/health'
-              port: 8080
-            initialDelaySeconds: 10
-            timeoutSeconds: 2
-            periodSeconds: 5
-            failureThreshold: 10
-          livenessProbe:
-            httpGet:
-              path: '/actuator/health'
-              port: 8080
-            initialDelaySeconds: 120
-            timeoutSeconds: 2
-            periodSeconds: 5
-            failureThreshold: 5
+          #readinessProbe:
+          #  httpGet:
+          #    path: '/actuator/health'
+          #    port: 8080
+          #  initialDelaySeconds: 10
+          #  timeoutSeconds: 2
+          #  periodSeconds: 5
+          #  failureThreshold: 10
+          #livenessProbe:
+          #  httpGet:
+          #    path: '/actuator/health'
+          #    port: 8080
+          #  initialDelaySeconds: 120
+          #  timeoutSeconds: 2
+          #  periodSeconds: 5
+          #  failureThreshold: 5
