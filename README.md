@@ -35,15 +35,18 @@
 
   - [Deploy]
 
-  - [Autoscale (HPA)]
-
   - [Config Map]
+
+  - [Persistence Volume]
+  
+  - [Circuit Breaker]
+   
+  - [Autoscale (HPA)]
 
   - [Zero-Downtime deploy (Readiness Probe)] 
 
   - [Self-healing (Liveness Probe)]
 
-  - [Circuit Breaker]
 
 # 서비스 시나리오
 
