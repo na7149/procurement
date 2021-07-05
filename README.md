@@ -834,7 +834,9 @@ kubectl get cm procurement-cm -o yaml
 
 ![image](https://user-images.githubusercontent.com/84000959/124436778-4d413100-ddb1-11eb-92a3-e0c2a77b212b.png)
 
+
 ## Persistence Volume
+Persistence Volume 생성, Mount, 로그 파일 생성
 - procurementrequest-pvc.yml : PVC 생성 파일
 ```
 apiVersion: v1
@@ -853,7 +855,7 @@ spec:
 
 - deployment.yml : Container에 Volumn Mount
 ```
-          volumeMounts:
+      volumeMounts:
             - name: volume
               mountPath: "/mnt/azure"
       volumes:
@@ -872,8 +874,12 @@ logging:
 
 - 마운트 경로에 logging file 생성 확인
 ```
-
+$ kubectl exec -it pod/procurementrequest-785dd46db4-hcct8 -n procurement -- /bin/sh
+$ cd /mnt/azure/logs
+$ tail -n 20 -f procurementrequest.log
 ```
+![image](https://user-images.githubusercontent.com/84000959/124458128-97cda800-ddc7-11eb-967e-0d10b5d0c420.png)
+
 
 ## Autoscale (HPA)
 앞서 CB(Circuit breaker)는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
