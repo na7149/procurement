@@ -1029,34 +1029,38 @@ failureThreshold: 10
 ```
 
 - deployment.yml에서 readiness 설정 제거 후, 배포중 siege 테스트 진행
+
 ![image](https://user-images.githubusercontent.com/84000959/124499995-ec8a1680-ddf9-11eb-95b7-969f43edccfb.png)
 
 ```
 kubectl exec -it pod/siege  -c siege -n procurement -- /bin/bash
 siege -c100 -t5S -v --content-type "application/json" 'http://procurementmanagement:8080/deliverymanagements POST {"procNo":"pp01","procTitle":"ppTitle"}'
 ```
-1.부하테스트 전 POD 상태
-![image](https://user-images.githubusercontent.com/84000959/124500957-a33ac680-ddfb-11eb-8006-ed9429019065.png)
 
-2.배포 중 부하테스트 수행 시 POD 상태
+1.배포 중 부하테스트 수행 시 POD 상태
 배포 중인 POD들과 정상 실행중인 POD 존재
 hpa 설정에 의해 target 지수 초과하여 booking scale-out 진행됨
+
 ![image](https://user-images.githubusercontent.com/84000959/124501096-eb59e900-ddfb-11eb-98b9-fd4a32959a69.png)
 
-3.배포 중 부하테스트 수행 결과(siege)
+2.배포 중 부하테스트 수행 결과(siege)
 배포가 진행되는 동안 부하테스트를 진행한 결과, 정상 실행중인 pod로의 요청은 성공(201), 배포중인 pod로의 요청은 실패(503 - Service Unavailable) 확인
+
 ![image](https://user-images.githubusercontent.com/84000959/124501180-09274e00-ddfc-11eb-8c7d-34eb1b44bd89.png)
 
 
 - deployment.yml에 readinessProbe 설정 후 부하발생 및 Availability 100% 확인
+
 ![image](https://user-images.githubusercontent.com/84000959/124502308-3117b100-ddfe-11eb-89ad-5548be5c3d9f.png)
 
 1.배포 중 부하테스트 수행 시 POD 상태
 배포 중인 POD들과 정상 실행중인 POD 존재
+
 ![image](https://user-images.githubusercontent.com/84000959/124502103-c6667580-ddfd-11eb-9cb2-8f1784087690.png)
 
 2.배포 중 부하테스트 수행 결과(siege)
 readiness 정상 적용 후, Availability 100% 확인
+
 ![image](https://user-images.githubusercontent.com/84000959/124502144-e007bd00-ddfd-11eb-8059-8f23ec42ee11.png)
 
 
@@ -1078,6 +1082,7 @@ readiness 정상 적용 후, Availability 100% 확인
 
 - liveness 설정 적용되어 컨테이너 재시작 되는 것을 확인
   Retry 시도 확인 (pod 생성 "RESTARTS" 숫자가 늘어나는 것을 확인) 
+
 ![image](https://user-images.githubusercontent.com/84000959/124503030-a6d04c80-ddff-11eb-922c-ee15f9ceefac.png)
 
 - depolyment.yml 파일의 path 및 port를 정상으로 원복
@@ -1094,6 +1099,7 @@ readiness 정상 적용 후, Availability 100% 확인
 ```
 
 - liveness 설정 적용되어 컨테이너 재시작 되지 않는 것 확인
+
 ![image](https://user-images.githubusercontent.com/84000959/124503549-c74cd680-de00-11eb-8532-28c5a2338ce5.png)
 
 
