@@ -680,14 +680,14 @@ git clone --recurse-submodules https://github.com/na7149/procurement.git
 ```
 az login
 
-az acr login --name procurementacr
-az aks get-credentials --resource-group procurement-rsrcgrp --name proc-aks
-az acr show --name procacr --query loginServer --output table
+az acr login --name user06acr
+az aks get-credentials --resource-group user06-rsrcgrp --name user06-aks
+az acr show --name user06acr --query loginServer --output table
 ```
 
 - Azure AKS에 ACR Attach 설정
 ```
-az aks update -n proc-aks -g procurement-rsrcgrp --attach-acr procacr
+az aks update -n user06-aks -g user06-rsrcgrp --attach-acr user06acr
 ```
 
 - namespace 등록 및 변경
@@ -721,7 +721,7 @@ watch kubectl get all
 ```
 cd procurementrequest
 mvn package
-az acr build --registry procacr --image procacr.azurecr.io/procurementrequest:v1 .
+az acr build --registry user06acr --image user06acr.azurecr.io/procurementrequest:v1 .
 cd kubernates
 kubectl apply -f deployment.yml
 kubectl apply -f service.yaml
@@ -729,11 +729,11 @@ kubectl apply -f service.yaml
 
 - 나머지 서비스에 대해서도 동일하게 등록을 진행함
 ```
-az acr build --registry procacr --image procacr.azurecr.io/procurementmanagement:v1 .
-az acr build --registry procacr --image procacr.azurecr.io/goodsdelivery:v1 .
-az acr build --registry procacr --image procacr.azurecr.io/mypage:v1  .
-az acr build --registry procacr --image procacr.azurecr.io/notification:v1  .
-az acr build --registry procacr --image procacr.azurecr.io/gateway:v1 .
+az acr build --registry user06acr --image user06acr.azurecr.io/procurementmanagement:v1 .
+az acr build --registry user06acr --image user06acr.azurecr.io/goodsdelivery:v1 .
+az acr build --registry user06acr --image user06acr.azurecr.io/mypage:v1  .
+az acr build --registry user06acr --image user06acr.azurecr.io/notification:v1  .
+az acr build --registry user06acr --image user06acr.azurecr.io/gateway:v1 .
 ```
 
 - 배포결과 확인
@@ -745,21 +745,15 @@ kubectl get all
 
 - Kafka 설치
 ``` 
-curl https://raw.githubusercontent.com/helm/helm/master/scripts/get > get_helm.sh
-chmod 700 get_helm.sh
-./get_helm.sh
-
 kubectl --namespace kube-system create sa tiller 
 kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
-helm init --service-account tiller
 
 helm repo add incubator https://charts.helm.sh/incubator
 helm repo update
-
 kubectl create ns kafka
-helm install --name my-kafka --namespace kafka incubator/kafka
+helm install my-kafka --namespace kafka incubator/kafka
 
-kubectl get all -n kafka
+kubectl get svc my-kafka -n kafka
 ``` 
 
 ## Autoscale (HPA)
@@ -780,7 +774,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: siege
-  namespace: bidding
+  namespace: procurement
 spec:
   containers:
   - name: siege
