@@ -685,7 +685,7 @@ az aks get-credentials --resource-group user06-rsrcgrp --name user06-aks
 az acr show --name user06acr --query loginServer --output table
 ```
 
-- Azure AKS에 ACR Attach 설정
+- (필요시) Azure AKS에 ACR Attach 설정
 ```
 az aks update -n user06-aks -g user06-rsrcgrp --attach-acr user06acr
 ```
@@ -706,7 +706,7 @@ watch kubectl get all
 - 배포진행
 1.procurement/procurementrequest/kubernetes/deployment.yml 파일 수정 (procurementmanagement/goodsdelivery/mypage/notification/gateway 동일)
 
-![image](https://user-images.githubusercontent.com/84000959/124393125-ff3a1800-dd33-11eb-953a-09609bf2e4a1.png)
+![image](https://user-images.githubusercontent.com/84000959/124421574-b5394c80-dd9c-11eb-95b0-c1666a757eb0.png)
 
 2.procurement/procurementrequest/kubernetes/service.yaml 파일 수정 (procurementmanagement/goodsdelivery/mypage/notification 동일)
 
@@ -740,32 +740,60 @@ az acr build --registry user06acr --image user06acr.azurecr.io/gateway:v1 .
 ``` 
 kubectl get all
 ``` 
-![image](https://user-images.githubusercontent.com/70736001/122503307-2b1a8580-d033-11eb-83fc-63b0f2154e3b.png)
+![image](https://user-images.githubusercontent.com/84000959/124437074-a27d4280-ddb1-11eb-8bf8-d873b21c591c.png)
 
 
 - Kafka 설치
 ``` 
+ Lab 환경에서 생성 시
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get > get_helm.sh
+chmod 700 get_helm.sh
+./get_helm.sh
+
 kubectl --namespace kube-system create sa tiller 
 kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+helm init --service-account tiller
 
 helm repo add incubator https://charts.helm.sh/incubator
 helm repo update
-kubectl create ns kafka
-helm install my-kafka --namespace kafka incubator/kafka
 
-kubectl get svc my-kafka -n kafka
+kubectl create ns kafka
+helm install --name my-kafka --namespace kafka incubator/kafka
+
+kubectl get all -n kafka
+
+-- 로컬 환경에서 생성 시
+--kubectl --namespace kube-system create sa tiller 
+--kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+--
+--helm repo add incubator https://charts.helm.sh/incubator
+--helm repo update
+--kubectl create ns kafka
+--helm install my-kafka --namespace kafka incubator/kafka
+--
+--kubectl get svc my-kafka -n kafka
+
+-- topic 신규 생성
+--kubectl -n kafka exec my-kafka-0 -- /usr/bin/kafka-topics --zookeeper my-kafka-zookeeper:2181 --topic procurement --create --partitions 1 --replication-factor 1
+--kubectl -n kafka exec my-kafka-0 -- /usr/bin/kafka-topics --zookeeper my-kafka-zookeeper:2181 --list
+-- 기존에 설치된 것 지우려면
+--kubectl delete namespace kafka
+--helm del --purge my-kafka
 ``` 
 
 ## Autoscale (HPA)
 앞서 CB(Circuit breaker)는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
 
-- 리소스에 대한 사용량 정의(procurement/procurementrequest/kubernetes/deployment.yml)
-![image](https://user-images.githubusercontent.com/70736001/122503960-49cd4c00-d034-11eb-8ab4-b322e7383cc0.png)
+- 리소스에 대한 사용량 정의(procurement/procurementmanagement/kubernetes/deployment.yml)
+- 
+![image](https://user-images.githubusercontent.com/84000959/124421819-342e8500-dd9d-11eb-9f83-953c92b496b0.png)
 
 - Autoscale 설정 (request값의 20%를 넘어서면 Replica를 10개까지 동적으로 확장)
 ```
-kubectl autoscale deployment procurementrequest --cpu-percent=20 --min=1 --max=10
+kubectl autoscale deployment procurementmanagement --cpu-percent=20 --min=1 --max=10
 ```
+
+![image](https://user-images.githubusercontent.com/84000959/124437404-00118f00-ddb2-11eb-80b4-31478d1e2304.png)
 
 - siege 생성 (로드제너레이터 설치)
 ```
@@ -781,10 +809,13 @@ spec:
     image: apexacme/siege-nginx
 EOF
 ```
+![image](https://user-images.githubusercontent.com/84000959/124437529-1ddef400-ddb2-11eb-84b6-a1c15d54a672.png)
+
 - 부하발생 (50명 동시사용자, 30초간 부하)
 ```
-kubectl exec -it pod/siege  -c siege -n bidding -- /bin/bash
-siege -c50 -t30S -v --content-type "application/json" 'http://xx.xx.xx.xx:8082/deliveryrequests POST {"procNo":pp01,"procTitle":"ppTitle"}'
+kubectl exec -it pod/siege  -c siege -n procurement -- /bin/bash
+siege -c50 -t30S -v --content-type "application/json" 'http://procurementmanagement:8080/deliverymanagements POST {"procNo":pp01,"procTitle":"ppTitle"}'
+siege -c50 -t3S -v --content-type "application/json" 'http://procurementmanagement:8080/deliverymanagements POST {"procNo":pp01,"procTitle":"ppTitle"}'
 ```
 - 모니터링 (부하증가로 스케일아웃되어지는 과정을 별도 창에서 모니터링)
 ```
@@ -794,11 +825,11 @@ watch kubectl get all
 
 1.테스트전
 
-![image](https://user-images.githubusercontent.com/70736001/122504322-0aebc600-d035-11eb-883f-35110d9d0457.png)
+![image](https://user-images.githubusercontent.com/84000959/124438279-f6d4f200-ddb2-11eb-8ab3-80a2bc85b2a9.png)
 
 2.테스트후
 
-![image](https://user-images.githubusercontent.com/70736001/122504349-1e972c80-d035-11eb-814e-a5ab909215c4.png)
+![image](https://user-images.githubusercontent.com/84000959/124439627-98a90e80-ddb4-11eb-9898-7357b0093450.png)
 
 3.부하발생 결과
 
@@ -844,23 +875,19 @@ api:
 
 - Config Map 생성 및 생성 확인
 ```
-kubectl create configmap procurement-cm --from-literal=url=procurementrequest
+kubectl create configmap procurement-cm --from-literal=url=procurementmanagement
 kubectl get cm
+-- kubectl delete configmap procurement-cm
 ```
 
-![image](https://user-images.githubusercontent.com/70736001/122505221-dc6eea80-d036-11eb-8757-b97f8d75baff.png)
+![image](https://user-images.githubusercontent.com/84000959/124436688-339fe980-ddb1-11eb-80ad-006953548983.png)
 
 ```
 kubectl get cm procurement-cm -o yaml
 ```
 
-![image](https://user-images.githubusercontent.com/70736001/122505270-f6103200-d036-11eb-8c96-513f95448989.png)
+![image](https://user-images.githubusercontent.com/84000959/124436778-4d413100-ddb1-11eb-92a3-e0c2a77b212b.png)
 
-```
-kubectl get pod
-```
-
-![image](https://user-images.githubusercontent.com/70736001/122505313-0fb17980-d037-11eb-9b57-c0d14f468a1c.png)
 
 
 ## Zero-Downtime deploy (Readiness Probe)
