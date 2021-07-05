@@ -1039,7 +1039,7 @@ siege -c100 -t5S -v --content-type "application/json" 'http://procurementmanagem
 
 1.배포 중 부하테스트 수행 시 POD 상태
 배포 중인 POD들과 정상 실행중인 POD 존재
-hpa 설정에 의해 target 지수 초과하여 booking scale-out 진행됨
+hpa 설정에 의해 target 지수 초과하여 POD scale-out 진행됨
 
 ![image](https://user-images.githubusercontent.com/84000959/124501096-eb59e900-ddfb-11eb-98b9-fd4a32959a69.png)
 
