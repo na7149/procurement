@@ -1078,14 +1078,24 @@ readiness 정상 적용 후, Availability 100% 확인
 
 - liveness 설정 적용되어 컨테이너 재시작 되는 것을 확인
   Retry 시도 확인 (pod 생성 "RESTARTS" 숫자가 늘어나는 것을 확인) 
-
-1.배포 전
-
-![image](https://user-images.githubusercontent.com/84000959/124502777-0ed26300-ddff-11eb-8071-2eb590d76d3d.png)
-
-2.배포 후
-
 ![image](https://user-images.githubusercontent.com/84000959/124503030-a6d04c80-ddff-11eb-922c-ee15f9ceefac.png)
+
+- depolyment.yml 파일의 path 및 port를 정상으로 원복
+  depolyment.yml(procurement/procurementmanagement/kubernetes/deployment.yml)
+```
+ livenessProbe:
+    httpGet:
+        path: '/actuator/health'
+        port: 8080
+      initialDelaySeconds: 120
+      timeoutSeconds: 2
+      periodSeconds: 5
+      failureThreshold: 5
+```
+
+- liveness 설정 적용되어 컨테이너 재시작 되지 않는 것 확인
+![image](https://user-images.githubusercontent.com/84000959/124503549-c74cd680-de00-11eb-8532-28c5a2338ce5.png)
+
 
 
 ## The End.
