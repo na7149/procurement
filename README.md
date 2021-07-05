@@ -781,60 +781,6 @@ kubectl get all -n kafka
 --helm del --purge my-kafka
 ``` 
 
-## Autoscale (HPA)
-앞서 CB(Circuit breaker)는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
-
-- 리소스에 대한 사용량 정의(procurement/procurementmanagement/kubernetes/deployment.yml)
-- 
-![image](https://user-images.githubusercontent.com/84000959/124421819-342e8500-dd9d-11eb-9f83-953c92b496b0.png)
-
-- Autoscale 설정 (request값의 20%를 넘어서면 Replica를 10개까지 동적으로 확장)
-```
-kubectl autoscale deployment procurementmanagement --cpu-percent=20 --min=1 --max=10
-```
-
-![image](https://user-images.githubusercontent.com/84000959/124437404-00118f00-ddb2-11eb-80b4-31478d1e2304.png)
-
-- siege 생성 (로드제너레이터 설치)
-```
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  name: siege
-  namespace: procurement
-spec:
-  containers:
-  - name: siege
-    image: apexacme/siege-nginx
-EOF
-```
-![image](https://user-images.githubusercontent.com/84000959/124437529-1ddef400-ddb2-11eb-84b6-a1c15d54a672.png)
-
-- 부하발생 (50명 동시사용자, 30초간 부하)
-```
-kubectl exec -it pod/siege  -c siege -n procurement -- /bin/bash
-siege -c50 -t30S -v --content-type "application/json" 'http://procurementmanagement:8080/deliverymanagements POST {"procNo":pp01,"procTitle":"ppTitle"}'
-siege -c50 -t3S -v --content-type "application/json" 'http://procurementmanagement:8080/deliverymanagements POST {"procNo":pp01,"procTitle":"ppTitle"}'
-```
-- 모니터링 (부하증가로 스케일아웃되어지는 과정을 별도 창에서 모니터링)
-```
-watch kubectl get all
-```
-- 자동스케일아웃으로 Availablity 100% 결과 확인 (시간이 좀 흐른 후 스케일 아웃이 벌어지는 것을 확인, siege의 로그를 보아도 전체적인 성공률이 높아진 것을 확인함)
-
-1.테스트전
-
-![image](https://user-images.githubusercontent.com/84000959/124438279-f6d4f200-ddb2-11eb-8ab3-80a2bc85b2a9.png)
-
-2.테스트후
-
-![image](https://user-images.githubusercontent.com/84000959/124439627-98a90e80-ddb4-11eb-9898-7357b0093450.png)
-
-3.부하발생 결과
-
-![image](https://user-images.githubusercontent.com/70736001/122504389-31a9fc80-d035-11eb-976e-f43261d1a8c2.png)
-
 ## Config Map
 ConfigMap을 사용하여 변경가능성이 있는 설정을 관리
 
@@ -888,6 +834,99 @@ kubectl get cm procurement-cm -o yaml
 
 ![image](https://user-images.githubusercontent.com/84000959/124436778-4d413100-ddb1-11eb-92a3-e0c2a77b212b.png)
 
+## Persistence Volume
+- procurementrequest-pvc.yml : PVC 생성 파일
+```
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: v-disk
+  namespace: procurement
+spec:
+  accessModes:
+  - ReadWriteMany
+  storageClassName: azurefile
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+- deployment.yml : Container에 Volumn Mount
+```
+          volumeMounts:
+            - name: volume
+              mountPath: "/mnt/azure"
+      volumes:
+      - name: volume
+        persistentVolumeClaim:
+          claimName: procurementrequest-disk
+```
+
+- application.yml : PVC Mount 경로
+```
+logging:
+  level:
+    root: info
+  file: /mnt/azure/logs/procurementrequest.log
+```
+
+- 마운트 경로에 logging file 생성 확인
+```
+
+```
+
+## Autoscale (HPA)
+앞서 CB(Circuit breaker)는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
+
+- 리소스에 대한 사용량 정의(procurement/procurementmanagement/kubernetes/deployment.yml)
+- 
+![image](https://user-images.githubusercontent.com/84000959/124421819-342e8500-dd9d-11eb-9f83-953c92b496b0.png)
+
+- Autoscale 설정 (request값의 20%를 넘어서면 Replica를 10개까지 동적으로 확장)
+```
+kubectl autoscale deployment procurementmanagement --cpu-percent=20 --min=1 --max=10
+```
+
+![image](https://user-images.githubusercontent.com/84000959/124437404-00118f00-ddb2-11eb-80b4-31478d1e2304.png)
+
+- siege 생성 (로드제너레이터 설치)
+```
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: siege
+  namespace: procurement
+spec:
+  containers:
+  - name: siege
+    image: apexacme/siege-nginx
+EOF
+```
+![image](https://user-images.githubusercontent.com/84000959/124437529-1ddef400-ddb2-11eb-84b6-a1c15d54a672.png)
+
+- 부하발생 (50명 동시사용자, 30초간 부하)
+```
+kubectl exec -it pod/siege  -c siege -n procurement -- /bin/bash
+siege -c50 -t30S -v --content-type "application/json" 'http://procurementmanagement:8080/deliverymanagements POST {"procNo":pp01,"procTitle":"ppTitle"}'
+```
+- 모니터링 (부하증가로 스케일아웃되어지는 과정을 별도 창에서 모니터링)
+```
+watch kubectl get all
+```
+- 자동스케일아웃으로 Availablity 100% 결과 확인 (시간이 좀 흐른 후 스케일 아웃이 벌어지는 것을 확인, siege의 로그를 보아도 전체적인 성공률이 높아진 것을 확인함)
+
+1.테스트전
+
+![image](https://user-images.githubusercontent.com/84000959/124438279-f6d4f200-ddb2-11eb-8ab3-80a2bc85b2a9.png)
+
+2.테스트후
+
+![image](https://user-images.githubusercontent.com/84000959/124439627-98a90e80-ddb4-11eb-9898-7357b0093450.png)
+
+3.부하발생 결과
+
+![image](https://user-images.githubusercontent.com/70736001/122504389-31a9fc80-d035-11eb-976e-f43261d1a8c2.png)
 
 
 ## Zero-Downtime deploy (Readiness Probe)
@@ -908,11 +947,11 @@ failureThreshold: 10
 
 - deployment.yml에서 readinessProbe 미설정 상태로 siege 부하발생
 
-![image](https://user-images.githubusercontent.com/70736001/122505873-2906f580-d038-11eb-86b8-2f8388f82dd1.png)
+![image](https://user-images.githubusercontent.com/84000959/124447149-0f95d580-ddbc-11eb-948d-a3bdb1b6b7f8.png)
 
 ```
 kubectl exec -it pod/siege  -c siege -n procurement -- /bin/bash
-siege -c100 -t5S -v --content-type "application/json" 'http://xx.xx.xx.xx:8080/deliveryrequests POST {"procNo":pp01,"procTitle":"ppTitle"}
+siege -c100 -t5S -v --content-type "application/json" 'http://procurementrequest:8080/deliveryrequests POST {"procNo":pp01,"procTitle":"ppTitle"}
 ```
 1.부하테스트 전
 
