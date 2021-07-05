@@ -963,7 +963,7 @@ $ siege -c100 -t10S -v --content-type "application/json" 'http://procurementrequ
 앞서 CB(Circuit breaker)는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
 
 - 리소스에 대한 사용량 정의(procurement/procurementmanagement/kubernetes/deployment.yml)
-- 
+
 ![image](https://user-images.githubusercontent.com/84000959/124421819-342e8500-dd9d-11eb-9f83-953c92b496b0.png)
 
 - Autoscale 설정 (request값의 20%를 넘어서면 Replica를 10개까지 동적으로 확장)
@@ -1016,11 +1016,11 @@ kubectl scale --replicas=1 deployment/procurementmanagement
 쿠버네티스는 각 컨테이너의 상태를 주기적으로 체크(Health Check)해서 문제가 있는 컨테이너는 서비스에서 제외한다.
 
 - deployment.yml에 readinessProbe 설정 후 미설정 상태 테스트를 위해 주석처리함 
-  depolyment.yml(procurement/procurementrequest/kubernetes/deployment.yml)
+  depolyment.yml(procurement/procurementmanagement/kubernetes/deployment.yml)
 ```
 readinessProbe:
 httpGet:
-  path: '/deliveryrequests'
+  path: '/actuator/health'
   port: 8080
 initialDelaySeconds: 10
 timeoutSeconds: 2
@@ -1028,56 +1028,47 @@ periodSeconds: 5
 failureThreshold: 10
 ```
 
-- deployment.yml에서 readinessProbe 미설정 상태로 siege 부하발생
-
-![image](https://user-images.githubusercontent.com/84000959/124447149-0f95d580-ddbc-11eb-948d-a3bdb1b6b7f8.png)
+- deployment.yml에서 readiness 설정 제거 후, 배포중 siege 테스트 진행
+![image](https://user-images.githubusercontent.com/84000959/124499995-ec8a1680-ddf9-11eb-95b7-969f43edccfb.png)
 
 ```
 kubectl exec -it pod/siege  -c siege -n procurement -- /bin/bash
-siege -c100 -t5S -v --content-type "application/json" 'http://procurementrequest:8080/deliveryrequests POST {"procNo":pp01,"procTitle":"ppTitle"}
+siege -c100 -t5S -v --content-type "application/json" 'http://procurementmanagement:8080/deliverymanagements POST {"procNo":"pp01","procTitle":"ppTitle"}'
 ```
-1.부하테스트 전
+1.부하테스트 전 POD 상태
+![image](https://user-images.githubusercontent.com/84000959/124500957-a33ac680-ddfb-11eb-8006-ed9429019065.png)
 
-![image](https://user-images.githubusercontent.com/70736001/122506020-75eacc00-d038-11eb-99df-4a4b90478bc3.png)
+2.배포 중 부하테스트 수행 시 POD 상태
+배포 중인 POD들과 정상 실행중인 POD 존재
+hpa 설정에 의해 target 지수 초과하여 booking scale-out 진행됨
+![image](https://user-images.githubusercontent.com/84000959/124501096-eb59e900-ddfb-11eb-98b9-fd4a32959a69.png)
 
-2.부하테스트 후
+3.배포 중 부하테스트 수행 결과(siege)
+배포가 진행되는 동안 부하테스트를 진행한 결과, 정상 실행중인 pod로의 요청은 성공(201), 배포중인 pod로의 요청은 실패(503 - Service Unavailable) 확인
+![image](https://user-images.githubusercontent.com/84000959/124501180-09274e00-ddfc-11eb-8c7d-34eb1b44bd89.png)
 
-![image](https://user-images.githubusercontent.com/70736001/122506060-84d17e80-d038-11eb-8449-b94b28a0f385.png)
-
-3.생성중인 Pod 에 대한 요청이 들어가 오류발생
-
-![image](https://user-images.githubusercontent.com/70736001/122506129-a03c8980-d038-11eb-8822-5ec57926b900.png)
-
-- 정상 실행중인 pod로의 요청은 성공(201), 비정상적인 요청은 실패(503 - Service Unavailable) 확인
-
-- hpa 설정에 의해 target 지수 초과하여 pod scale-out 진행됨
 
 - deployment.yml에 readinessProbe 설정 후 부하발생 및 Availability 100% 확인
+![image](https://user-images.githubusercontent.com/84000959/124502308-3117b100-ddfe-11eb-89ad-5548be5c3d9f.png)
 
-![image](https://user-images.githubusercontent.com/70736001/122506358-2527a300-d039-11eb-84cb-62eb09687bda.png)
+1.배포 중 부하테스트 수행 시 POD 상태
+배포 중인 POD들과 정상 실행중인 POD 존재
+![image](https://user-images.githubusercontent.com/84000959/124502103-c6667580-ddfd-11eb-9cb2-8f1784087690.png)
 
-1.부하테스트 전
-
-![image](https://user-images.githubusercontent.com/70736001/122506400-3c669080-d039-11eb-8e5e-a4f76b0e2956.png)
-
-2.부하테스트 후
-
-![image](https://user-images.githubusercontent.com/70736001/122506421-4be5d980-d039-11eb-92a2-44e7827299bf.png)
-
-3.readiness 정상 적용 후, Availability 100% 확인
-
-![image](https://user-images.githubusercontent.com/70736001/122506471-61f39a00-d039-11eb-9077-608f375e27f3.png)
+2.배포 중 부하테스트 수행 결과(siege)
+readiness 정상 적용 후, Availability 100% 확인
+![image](https://user-images.githubusercontent.com/84000959/124502144-e007bd00-ddfd-11eb-8059-8f23ec42ee11.png)
 
 
 ## Self-healing (Liveness Probe)
 쿠버네티스는 각 컨테이너의 상태를 주기적으로 체크(Health Check)해서 문제가 있는 컨테이너는 자동으로재시작한다.
 
 - depolyment.yml 파일의 path 및 port를 잘못된 값으로 변경
-  depolyment.yml(procurement/procurementrequest/kubernetes/deployment.yml)
+  depolyment.yml(procurement/procurementmanagement/kubernetes/deployment.yml)
 ```
  livenessProbe:
     httpGet:
-        path: '/deliveryrequests/failed'
+        path: '/actuator/failed'
         port: 8090
       initialDelaySeconds: 30
       timeoutSeconds: 2
@@ -1085,53 +1076,16 @@ siege -c100 -t5S -v --content-type "application/json" 'http://procurementrequest
       failureThreshold: 5
 ```
 
-![image](https://user-images.githubusercontent.com/70736001/122506714-d75f6a80-d039-11eb-8bd0-223490797b58.png)
-
 - liveness 설정 적용되어 컨테이너 재시작 되는 것을 확인
   Retry 시도 확인 (pod 생성 "RESTARTS" 숫자가 늘어나는 것을 확인) 
 
 1.배포 전
 
-![image](https://user-images.githubusercontent.com/70736001/122506797-fb22b080-d039-11eb-9a0b-754e0fea45b2.png)
+![image](https://user-images.githubusercontent.com/84000959/124502777-0ed26300-ddff-11eb-8071-2eb590d76d3d.png)
 
 2.배포 후
 
-![image](https://user-images.githubusercontent.com/70736001/122506831-0c6bbd00-d03a-11eb-880c-dc8d3e00798f.png)
-
-## Circuit Breaker
-서킷 브레이킹 프레임워크의 선택: Spring FeignClient + Hystrix 옵션을 사용하여 구현함
-시나리오는 검사결과등록(물품요구:procurementrequest)-->검사결과공지(물품관리:procurementmanagement) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 검사결과등록이 과도할 경우 CB 를 통하여 장애격리.
+![image](https://user-images.githubusercontent.com/84000959/124503030-a6d04c80-ddff-11eb-922c-ee15f9ceefac.png)
 
 
-- Hystrix 를 설정: 요청처리 쓰레드에서 처리시간이 1000ms가 넘어서기 시작하면 CB 작동하도록 설정
-
-**application.yml (procurementrequest)**
-```
-feign:
-  hystrix:
-    enabled: true
-
-hystrix:
-  command:
-    default:
-      execution.isolation.thread.timeoutInMilliseconds: 1000
-```
-
-- 피호출 서비스(납품관리:procurementmanagement) 의 임의 부하 처리 - 800ms에서 증감 300ms 정도하여 800~1100 ms 사이에서 발생하도록 처리
-DeliverymanagementController.java
-```
-req/res를 처리하는 피호출 function에 sleep 추가
-
-	try {
-	   Thread.sleep((long) (800 + Math.random() * 300));
-	} catch (InterruptedException e) {
-	   e.printStackTrace();
-	}
-```
-
-- req/res 호출하는 위치가 onPostUpdate에 있어 실제로 Data Update가 발생하지 않으면 호출이 되지 않는 문제가 있어 siege를 2개 실행하여 Update가 지속적으로 발생하게 처리 함
-```
-siege -c2 –t20S  -v --content-type "application/json" 'http://xx.xx.xx.xx:8080/inspectionresults/2 PATCH {"procNo":"pp01","inspectionSuccFlag":"true"}'
-siege -c2 –t20S  -v --content-type "application/json" 'http://xx.xx.xx.xx:8080/inspectionresults/2 PATCH {"procNo":"pp01","inspectionSuccFlag":"false"}'
-```
-![image](https://user-images.githubusercontent.com/70736001/122508763-7b96e080-d03d-11eb-90f8-8380277cdc17.png)
+## The End.
