@@ -902,6 +902,9 @@ $ kubectl label namespace procurement istio-injection=enabled
 ```
 
 - Virsual Service 생성 (Timeout 3초 설정)
+```
+kubectl apply -f procurementrequest-istio.yaml
+```
 - /procurement/procurementrequest/kubernetes/procurementrequest-istio.yaml 파일
 ```
 apiVersion: networking.istio.io/v1alpha3
