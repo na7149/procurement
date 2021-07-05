@@ -690,7 +690,7 @@ az acr show --name user06acr --query loginServer --output table
 az aks update -n user06-aks -g user06-rsrcgrp --attach-acr user06acr
 ```
 
-- namespace 등록 및 변경
+- 기본 namespace 지정 및 namespace 생성
 ```
 kubectl config set-context --current --namespace=procurement
 kubectl create ns procurement
