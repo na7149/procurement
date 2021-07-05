@@ -948,7 +948,7 @@ EOF
 ![image](https://user-images.githubusercontent.com/84000959/124437529-1ddef400-ddb2-11eb-84b6-a1c15d54a672.png)
 
 
-- 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인(동시사용자 100명, 60초 동안 실시)
+- 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인(동시사용자 100명, 10초 동안 실시)
 ```
 $ siege -c100 -t10S -v --content-type "application/json" 'http://procurementrequest:8080/deliveryrequests/1 PATCH {"procNo":"t01","companyNo":"c01","companyNm":"hehheh99","inspectionSuccFlag":"true"}'
 ```
