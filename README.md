@@ -880,20 +880,53 @@ $ tail -n 20 -f procurementrequest.log
 ```
 ![image](https://user-images.githubusercontent.com/84000959/124458128-97cda800-ddc7-11eb-967e-0d10b5d0c420.png)
 
+## Circuit Breaker
+서킷 브레이킹 프레임워크의 선택: Spring FeignClient + Istio를 설치하여, procurement namespace에 주입하여 구현함
+시나리오는 검사결과갱신–>검사결과공지 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 검사결과갱신 요청이 과도할 경우 CB 를 통하여 장애격리
 
-## Autoscale (HPA)
-앞서 CB(Circuit breaker)는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
-
-- 리소스에 대한 사용량 정의(procurement/procurementmanagement/kubernetes/deployment.yml)
-- 
-![image](https://user-images.githubusercontent.com/84000959/124421819-342e8500-dd9d-11eb-9f83-953c92b496b0.png)
-
-- Autoscale 설정 (request값의 20%를 넘어서면 Replica를 10개까지 동적으로 확장)
+- Istio 다운로드 및 PATH 추가, 설치, namespace에 istio주입
 ```
-kubectl autoscale deployment procurementmanagement --cpu-percent=20 --min=1 --max=10
+$ curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.7.1 TARGET_ARCH=x86_64 sh -
+※ istio v1.7.1은 Kubernetes 1.16이상에서만 동작
 ```
 
-![image](https://user-images.githubusercontent.com/84000959/124437404-00118f00-ddb2-11eb-80b4-31478d1e2304.png)
+- istio 설치
+```
+$ istioctl install --set profile=demo --set hub=gcr.io/istio-release
+※ Docker Hub Rate Limiting 우회 설정
+```
+
+- procurement namespace에 istio주입
+```
+$ kubectl label namespace procurement istio-injection=enabled
+```
+
+- Virsual Service 생성 (Timeout 3초 설정)
+- /procurement/procurementrequest/kubernetes/procurementrequest-istio.yaml 파일
+```
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: vs-procurementrequest-network-rule
+  namespace: procurement
+spec:
+  hosts:
+  - procurementrequest
+  http:
+  - route:
+    - destination:
+        host: procurementrequest
+    timeout: 3s
+```
+
+- (필요시) VirtualService 삭제
+```
+kubectl get VirtualService
+kubectl delete VirtualService vs-procurementmanagement-network-rule
+```
+
+- procurementrequest 서비스 재배포 후 Pod에 CB 부착 확인
+![image](https://user-images.githubusercontent.com/84000959/124481640-74b0f180-dde3-11eb-9302-bc88065c8b83.png)
 
 - siege 생성 (로드제너레이터 설치)
 ```
@@ -911,10 +944,40 @@ EOF
 ```
 ![image](https://user-images.githubusercontent.com/84000959/124437529-1ddef400-ddb2-11eb-84b6-a1c15d54a672.png)
 
+
+- 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인(동시사용자 100명, 60초 동안 실시)
+```
+$ siege -c100 -t10S -v --content-type "application/json" 'http://procurementrequest:8080/deliveryrequests/1 PATCH {"procNo":"t01","companyNo":"c01","companyNm":"hehheh99","inspectionSuccFlag":"true"}'
+```
+![image](https://user-images.githubusercontent.com/84000959/124494137-71246700-ddf1-11eb-9be4-48456667153d.png)
+![image](https://user-images.githubusercontent.com/84000959/124494196-800b1980-ddf1-11eb-9877-33bb16548e72.png)
+![image](https://user-images.githubusercontent.com/84000959/124494262-94e7ad00-ddf1-11eb-8898-ee9865026ba4.png)
+
+    - 운영시스템은 죽지 않고 지속적으로 CB 에 의하여 적절히 회로가 열림과 닫힘이 벌어지면서 자원을 보호하고 있음을 보여줌.
+    - 99.79% 정상적으로 처리되었음.
+
+## Autoscale (HPA)
+앞서 CB(Circuit breaker)는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
+
+- 리소스에 대한 사용량 정의(procurement/procurementmanagement/kubernetes/deployment.yml)
+- 
+![image](https://user-images.githubusercontent.com/84000959/124421819-342e8500-dd9d-11eb-9f83-953c92b496b0.png)
+
+- Autoscale 설정 (request값의 20%를 넘어서면 Replica를 10개까지 동적으로 확장)
+```
+kubectl autoscale deployment procurementmanagement --cpu-percent=20 --min=1 --max=10
+```
+![image](https://user-images.githubusercontent.com/84000959/124437404-00118f00-ddb2-11eb-80b4-31478d1e2304.png)
+
+-- (필요시) horizontalpodautoscaler 삭제
+```
+kubectl delete horizontalpodautoscaler procurementmanagement -n procurement
+```
+
 - 부하발생 (50명 동시사용자, 30초간 부하)
 ```
 kubectl exec -it pod/siege  -c siege -n procurement -- /bin/bash
-siege -c50 -t30S -v --content-type "application/json" 'http://procurementmanagement:8080/deliverymanagements POST {"procNo":pp01,"procTitle":"ppTitle"}'
+siege -c50 -t30S -v --content-type "application/json" 'http://procurementmanagement:8080/deliverymanagements POST {"procNo":"pp01","procTitle":"ppTitle"}'
 ```
 - 모니터링 (부하증가로 스케일아웃되어지는 과정을 별도 창에서 모니터링)
 ```
@@ -922,17 +985,28 @@ watch kubectl get all
 ```
 - 자동스케일아웃으로 Availablity 100% 결과 확인 (시간이 좀 흐른 후 스케일 아웃이 벌어지는 것을 확인, siege의 로그를 보아도 전체적인 성공률이 높아진 것을 확인함)
 
+- 로그 확인
+```
+kubectl logs -f pod/procurementmanagement-69444dbc9-z6pvp -c procurementmanagement
+```
+
+- (필요시) Pod 크기 조정
+```
+kubectl scale --replicas=1 deployment/procurementmanagement
+```
+
 1.테스트전
 
-![image](https://user-images.githubusercontent.com/84000959/124438279-f6d4f200-ddb2-11eb-8ab3-80a2bc85b2a9.png)
+![image](https://user-images.githubusercontent.com/84000959/124495802-869a9080-ddf3-11eb-836e-b33e18cc6785.png)
 
 2.테스트후
 
-![image](https://user-images.githubusercontent.com/84000959/124439627-98a90e80-ddb4-11eb-9898-7357b0093450.png)
+![image](https://user-images.githubusercontent.com/84000959/124495372-fc522c80-ddf2-11eb-9789-e18934c985aa.png)
 
 3.부하발생 결과
 
-![image](https://user-images.githubusercontent.com/70736001/122504389-31a9fc80-d035-11eb-976e-f43261d1a8c2.png)
+![image](https://user-images.githubusercontent.com/84000959/124495436-10962980-ddf3-11eb-8402-7eba921b3829.png)
+
 
 
 ## Zero-Downtime deploy (Readiness Probe)
