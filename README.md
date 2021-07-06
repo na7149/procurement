@@ -363,8 +363,9 @@ public interface InspectionResultRepository extends PagingAndSortingRepository<I
 }
 ```
 
-- 적용 후 REST API 의 테스트
-  - 수요기관담당자는 조달요청서를 등록한다. (Command-POST)
+적용 후 REST API 의 테스트
+
+- 수요기관담당자는 조달요청서를 등록한다. (Command-POST)
 ```
     http POST localhost:8082/deliveryrequests procNo=p01 procTitle=title01
     http GET http://localhost:8082/deliveryrequests/1
