@@ -79,6 +79,11 @@
   - 조달업체는 납품현황조회 화면에서 검사 상태를 확인 할 수 있어야 한다.CQRS - 조회전용 서비스
 ```
 
+참고 시나리오
+
+![image](https://user-images.githubusercontent.com/84000959/124525195-4fe76900-de39-11eb-93f4-3af070516da9.png)
+
+
 ### Microservice명
 
 ```
