@@ -81,7 +81,7 @@
 
 참고 시나리오
 
-![image](https://user-images.githubusercontent.com/84000959/124525195-4fe76900-de39-11eb-93f4-3af070516da9.png)
+![image](https://user-images.githubusercontent.com/84000959/124525282-ab195b80-de39-11eb-8f95-ce311407dfe5.png)
 
 
 ### Microservice명
