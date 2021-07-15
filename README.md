@@ -35,15 +35,18 @@
 
   - [Deploy]
 
-  - [Autoscale (HPA)]
-
   - [Config Map]
+
+  - [Persistence Volume]
+  
+  - [Circuit Breaker]
+   
+  - [Autoscale (HPA)]
 
   - [Zero-Downtime deploy (Readiness Probe)] 
 
   - [Self-healing (Liveness Probe)]
 
-  - [Circuit Breaker]
 
 # 서비스 시나리오
 
@@ -75,6 +78,11 @@
 3. 성능
   - 조달업체는 납품현황조회 화면에서 검사 상태를 확인 할 수 있어야 한다.CQRS - 조회전용 서비스
 ```
+
+참고 시나리오
+
+![image](https://user-images.githubusercontent.com/84000959/124525282-ab195b80-de39-11eb-8f95-ce311407dfe5.png)
+
 
 ### Microservice명
 
@@ -355,8 +363,9 @@ public interface InspectionResultRepository extends PagingAndSortingRepository<I
 }
 ```
 
-- 적용 후 REST API 의 테스트
-  - 수요기관담당자는 조달요청서를 등록한다. (Command-POST)
+적용 후 REST API 의 테스트
+
+- 수요기관담당자는 조달요청서를 등록한다. (Command-POST)
 ```
     http POST localhost:8082/deliveryrequests procNo=p01 procTitle=title01
     http GET http://localhost:8082/deliveryrequests/1
@@ -680,12 +689,17 @@ git clone --recurse-submodules https://github.com/na7149/procurement.git
 ```
 az login
 
-az acr login --name procurementacr
-az aks get-credentials --resource-group procurement-rsrcgrp --name procurement-aks
-az acr show --name procurementacr --query loginServer --output table
+az acr login --name user06acr
+az aks get-credentials --resource-group user06-rsrcgrp --name user06-aks
+az acr show --name user06acr --query loginServer --output table
 ```
 
-- namespace 등록 및 변경
+- (필요시) Azure AKS에 ACR Attach 설정
+```
+az aks update -n user06-aks -g user06-rsrcgrp --attach-acr user06acr
+```
+
+- 기본 namespace 지정 및 namespace 생성
 ```
 kubectl config set-context --current --namespace=procurement
 kubectl create ns procurement
@@ -701,7 +715,7 @@ watch kubectl get all
 - 배포진행
 1.procurement/procurementrequest/kubernetes/deployment.yml 파일 수정 (procurementmanagement/goodsdelivery/mypage/notification/gateway 동일)
 
-![image](https://user-images.githubusercontent.com/84000959/124378584-25889500-dced-11eb-926e-5bbb4e42e7df.png)
+![image](https://user-images.githubusercontent.com/84000959/124421574-b5394c80-dd9c-11eb-95b0-c1666a757eb0.png)
 
 2.procurement/procurementrequest/kubernetes/service.yaml 파일 수정 (procurementmanagement/goodsdelivery/mypage/notification 동일)
 
@@ -716,7 +730,7 @@ watch kubectl get all
 ```
 cd procurementrequest
 mvn package
-az acr build --registry procurementacr --image procurementacr.azurecr.io/procurementrequest:v1 .
+az acr build --registry user06acr --image user06acr.azurecr.io/procurementrequest:v1 .
 cd kubernates
 kubectl apply -f deployment.yml
 kubectl apply -f service.yaml
@@ -724,22 +738,23 @@ kubectl apply -f service.yaml
 
 - 나머지 서비스에 대해서도 동일하게 등록을 진행함
 ```
-az acr build --registry procurementacr --image procurementacr.azurecr.io/procurementmanagement:v1 .
-az acr build --registry procurementacr --image procurementacr.azurecr.io/goodsdelivery:v1 .
-az acr build --registry procurementacr --image procurementacr.azurecr.io/mypage:v1  .
-az acr build --registry procurementacr --image procurementacr.azurecr.io/notification:v1  .
-az acr build --registry procurementacr --image procurementacr.azurecr.io/gateway:v1 .
+az acr build --registry user06acr --image user06acr.azurecr.io/procurementmanagement:v1 .
+az acr build --registry user06acr --image user06acr.azurecr.io/goodsdelivery:v1 .
+az acr build --registry user06acr --image user06acr.azurecr.io/mypage:v1  .
+az acr build --registry user06acr --image user06acr.azurecr.io/notification:v1  .
+az acr build --registry user06acr --image user06acr.azurecr.io/gateway:v1 .
 ```
 
 - 배포결과 확인
 ``` 
 kubectl get all
 ``` 
-![image](https://user-images.githubusercontent.com/70736001/122503307-2b1a8580-d033-11eb-83fc-63b0f2154e3b.png)
+![image](https://user-images.githubusercontent.com/84000959/124437074-a27d4280-ddb1-11eb-8bf8-d873b21c591c.png)
 
 
 - Kafka 설치
 ``` 
+ Lab 환경에서 생성 시
 curl https://raw.githubusercontent.com/helm/helm/master/scripts/get > get_helm.sh
 chmod 700 get_helm.sh
 ./get_helm.sh
@@ -755,55 +770,25 @@ kubectl create ns kafka
 helm install --name my-kafka --namespace kafka incubator/kafka
 
 kubectl get all -n kafka
+
+-- 로컬 환경에서 생성 시
+--kubectl --namespace kube-system create sa tiller 
+--kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+--
+--helm repo add incubator https://charts.helm.sh/incubator
+--helm repo update
+--kubectl create ns kafka
+--helm install my-kafka --namespace kafka incubator/kafka
+--
+--kubectl get svc my-kafka -n kafka
+
+-- topic 신규 생성
+--kubectl -n kafka exec my-kafka-0 -- /usr/bin/kafka-topics --zookeeper my-kafka-zookeeper:2181 --topic procurement --create --partitions 1 --replication-factor 1
+--kubectl -n kafka exec my-kafka-0 -- /usr/bin/kafka-topics --zookeeper my-kafka-zookeeper:2181 --list
+-- 기존에 설치된 것 지우려면
+--kubectl delete namespace kafka
+--helm del --purge my-kafka
 ``` 
-
-## Autoscale (HPA)
-앞서 CB(Circuit breaker)는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
-
-- 리소스에 대한 사용량 정의(procurement/procurementrequest/kubernetes/deployment.yml)
-![image](https://user-images.githubusercontent.com/70736001/122503960-49cd4c00-d034-11eb-8ab4-b322e7383cc0.png)
-
-- Autoscale 설정 (request값의 20%를 넘어서면 Replica를 10개까지 동적으로 확장)
-```
-kubectl autoscale deployment procurementrequest --cpu-percent=20 --min=1 --max=10
-```
-
-- siege 생성 (로드제너레이터 설치)
-```
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  name: siege
-  namespace: bidding
-spec:
-  containers:
-  - name: siege
-    image: apexacme/siege-nginx
-EOF
-```
-- 부하발생 (50명 동시사용자, 30초간 부하)
-```
-kubectl exec -it pod/siege  -c siege -n bidding -- /bin/bash
-siege -c50 -t30S -v --content-type "application/json" 'http://xx.xx.xx.xx:8082/deliveryrequests POST {"procNo":pp01,"procTitle":"ppTitle"}'
-```
-- 모니터링 (부하증가로 스케일아웃되어지는 과정을 별도 창에서 모니터링)
-```
-watch kubectl get all
-```
-- 자동스케일아웃으로 Availablity 100% 결과 확인 (시간이 좀 흐른 후 스케일 아웃이 벌어지는 것을 확인, siege의 로그를 보아도 전체적인 성공률이 높아진 것을 확인함)
-
-1.테스트전
-
-![image](https://user-images.githubusercontent.com/70736001/122504322-0aebc600-d035-11eb-883f-35110d9d0457.png)
-
-2.테스트후
-
-![image](https://user-images.githubusercontent.com/70736001/122504349-1e972c80-d035-11eb-814e-a5ab909215c4.png)
-
-3.부하발생 결과
-
-![image](https://user-images.githubusercontent.com/70736001/122504389-31a9fc80-d035-11eb-976e-f43261d1a8c2.png)
 
 ## Config Map
 ConfigMap을 사용하여 변경가능성이 있는 설정을 관리
@@ -845,34 +830,207 @@ api:
 
 - Config Map 생성 및 생성 확인
 ```
-kubectl create configmap procurement-cm --from-literal=url=procurementrequest
+kubectl create configmap procurement-cm --from-literal=url=procurementmanagement
 kubectl get cm
+-- kubectl delete configmap procurement-cm
 ```
 
-![image](https://user-images.githubusercontent.com/70736001/122505221-dc6eea80-d036-11eb-8757-b97f8d75baff.png)
+![image](https://user-images.githubusercontent.com/84000959/124436688-339fe980-ddb1-11eb-80ad-006953548983.png)
 
 ```
 kubectl get cm procurement-cm -o yaml
 ```
 
-![image](https://user-images.githubusercontent.com/70736001/122505270-f6103200-d036-11eb-8c96-513f95448989.png)
+![image](https://user-images.githubusercontent.com/84000959/124436778-4d413100-ddb1-11eb-92a3-e0c2a77b212b.png)
 
+
+## Persistence Volume
+Persistence Volume 생성, Mount, 로그 파일 생성
+- procurementrequest-pvc.yml : PVC 생성 파일
 ```
-kubectl get pod
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: v-disk
+  namespace: procurement
+spec:
+  accessModes:
+  - ReadWriteMany
+  storageClassName: azurefile
+  resources:
+    requests:
+      storage: 1Gi
 ```
 
-![image](https://user-images.githubusercontent.com/70736001/122505313-0fb17980-d037-11eb-9b57-c0d14f468a1c.png)
+- deployment.yml : Container에 Volumn Mount
+```
+      volumeMounts:
+            - name: volume
+              mountPath: "/mnt/azure"
+      volumes:
+      - name: volume
+        persistentVolumeClaim:
+          claimName: procurementrequest-disk
+```
+
+- application.yml : PVC Mount 경로
+```
+logging:
+  level:
+    root: info
+  file: /mnt/azure/logs/procurementrequest.log
+```
+
+- 마운트 경로에 logging file 생성 확인
+```
+$ kubectl exec -it pod/procurementrequest-785dd46db4-hcct8 -n procurement -- /bin/sh
+$ cd /mnt/azure/logs
+$ tail -n 20 -f procurementrequest.log
+```
+![image](https://user-images.githubusercontent.com/84000959/124458128-97cda800-ddc7-11eb-967e-0d10b5d0c420.png)
+
+## Circuit Breaker
+서킷 브레이킹 프레임워크의 선택: Spring FeignClient + Istio를 설치하여, procurement namespace에 주입하여 구현함
+시나리오는 검사결과갱신–>검사결과공지 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 검사결과갱신 요청이 과도할 경우 CB 를 통하여 장애격리
+
+- Istio 다운로드 및 PATH 추가, 설치, namespace에 istio주입
+```
+$ curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.7.1 TARGET_ARCH=x86_64 sh -
+※ istio v1.7.1은 Kubernetes 1.16이상에서만 동작
+```
+
+- istio 설치
+```
+$ istioctl install --set profile=demo --set hub=gcr.io/istio-release
+※ Docker Hub Rate Limiting 우회 설정
+```
+
+- procurement namespace에 istio주입
+```
+$ kubectl label namespace procurement istio-injection=enabled
+```
+
+- Virsual Service 생성 (Timeout 3초 설정)
+```
+kubectl apply -f procurementrequest-istio.yaml
+```
+- /procurement/procurementrequest/kubernetes/procurementrequest-istio.yaml 파일
+```
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: vs-procurementrequest-network-rule
+  namespace: procurement
+spec:
+  hosts:
+  - procurementrequest
+  http:
+  - route:
+    - destination:
+        host: procurementrequest
+    timeout: 3s
+```
+
+- (필요시) VirtualService 삭제
+```
+kubectl get VirtualService
+kubectl delete VirtualService vs-procurementmanagement-network-rule
+```
+
+- procurementrequest 서비스 재배포 후 Pod에 CB 부착 확인
+![image](https://user-images.githubusercontent.com/84000959/124481640-74b0f180-dde3-11eb-9302-bc88065c8b83.png)
+
+- siege 생성 (로드제너레이터 설치)
+```
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: siege
+  namespace: procurement
+spec:
+  containers:
+  - name: siege
+    image: apexacme/siege-nginx
+EOF
+```
+![image](https://user-images.githubusercontent.com/84000959/124437529-1ddef400-ddb2-11eb-84b6-a1c15d54a672.png)
+
+
+- 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인(동시사용자 100명, 10초 동안 실시)
+```
+kubectl exec -it pod/siege  -c siege -n procurement -- /bin/bash
+siege -c100 -t10S -v --content-type "application/json" 'http://procurementrequest:8080/deliveryrequests/1 PATCH {"procNo":"t01","companyNo":"c01","companyNm":"hehheh99","inspectionSuccFlag":"true"}'
+```
+![image](https://user-images.githubusercontent.com/84000959/124494137-71246700-ddf1-11eb-9be4-48456667153d.png)
+![image](https://user-images.githubusercontent.com/84000959/124494196-800b1980-ddf1-11eb-9877-33bb16548e72.png)
+![image](https://user-images.githubusercontent.com/84000959/124494262-94e7ad00-ddf1-11eb-8898-ee9865026ba4.png)
+
+    - 운영시스템은 죽지 않고 지속적으로 CB 에 의하여 적절히 회로가 열림과 닫힘이 벌어지면서 자원을 보호하고 있음을 보여줌.
+    - 99.79% 정상적으로 처리되었음.
+
+## Autoscale (HPA)
+앞서 CB(Circuit breaker)는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
+
+- 리소스에 대한 사용량 정의(procurement/procurementmanagement/kubernetes/deployment.yml)
+
+![image](https://user-images.githubusercontent.com/84000959/124421819-342e8500-dd9d-11eb-9f83-953c92b496b0.png)
+
+- Autoscale 설정 (request값의 20%를 넘어서면 Replica를 10개까지 동적으로 확장)
+```
+kubectl autoscale deployment procurementmanagement --cpu-percent=20 --min=1 --max=10
+```
+![image](https://user-images.githubusercontent.com/84000959/124437404-00118f00-ddb2-11eb-80b4-31478d1e2304.png)
+
+-- (필요시) horizontalpodautoscaler 삭제
+```
+kubectl delete horizontalpodautoscaler procurementmanagement -n procurement
+```
+
+- 부하발생 (50명 동시사용자, 30초간 부하)
+```
+kubectl exec -it pod/siege  -c siege -n procurement -- /bin/bash
+siege -c50 -t30S -v --content-type "application/json" 'http://procurementmanagement:8080/deliverymanagements POST {"procNo":"pp01","procTitle":"ppTitle"}'
+```
+- 모니터링 (부하증가로 스케일아웃되어지는 과정을 별도 창에서 모니터링)
+```
+watch kubectl get all
+```
+- 자동스케일아웃으로 Availablity 100% 결과 확인 (시간이 좀 흐른 후 스케일 아웃이 벌어지는 것을 확인, siege의 로그를 보아도 전체적인 성공률이 높아진 것을 확인함)
+
+- 로그 확인
+```
+kubectl logs -f pod/procurementmanagement-69444dbc9-z6pvp -c procurementmanagement
+```
+
+- (필요시) Pod 크기 조정
+```
+kubectl scale --replicas=1 deployment/procurementmanagement
+```
+
+1.테스트전
+
+![image](https://user-images.githubusercontent.com/84000959/124495802-869a9080-ddf3-11eb-836e-b33e18cc6785.png)
+
+2.테스트후
+
+![image](https://user-images.githubusercontent.com/84000959/124495372-fc522c80-ddf2-11eb-9789-e18934c985aa.png)
+
+3.부하발생 결과
+
+![image](https://user-images.githubusercontent.com/84000959/124495436-10962980-ddf3-11eb-8402-7eba921b3829.png)
+
 
 
 ## Zero-Downtime deploy (Readiness Probe)
 쿠버네티스는 각 컨테이너의 상태를 주기적으로 체크(Health Check)해서 문제가 있는 컨테이너는 서비스에서 제외한다.
 
 - deployment.yml에 readinessProbe 설정 후 미설정 상태 테스트를 위해 주석처리함 
-  depolyment.yml(procurement/procurementrequest/kubernetes/deployment.yml)
+  depolyment.yml(procurement/procurementmanagement/kubernetes/deployment.yml)
 ```
 readinessProbe:
 httpGet:
-  path: '/deliveryrequests'
+  path: '/actuator/health'
   port: 8080
 initialDelaySeconds: 10
 timeoutSeconds: 2
@@ -880,56 +1038,51 @@ periodSeconds: 5
 failureThreshold: 10
 ```
 
-- deployment.yml에서 readinessProbe 미설정 상태로 siege 부하발생
+- deployment.yml에서 readiness 설정 제거 후, 배포중 siege 테스트 진행
 
-![image](https://user-images.githubusercontent.com/70736001/122505873-2906f580-d038-11eb-86b8-2f8388f82dd1.png)
+![image](https://user-images.githubusercontent.com/84000959/124499995-ec8a1680-ddf9-11eb-95b7-969f43edccfb.png)
 
 ```
 kubectl exec -it pod/siege  -c siege -n procurement -- /bin/bash
-siege -c100 -t5S -v --content-type "application/json" 'http://xx.xx.xx.xx:8080/deliveryrequests POST {"procNo":pp01,"procTitle":"ppTitle"}
+siege -c100 -t5S -v --content-type "application/json" 'http://procurementmanagement:8080/deliverymanagements POST {"procNo":"pp01","procTitle":"ppTitle"}'
 ```
-1.부하테스트 전
 
-![image](https://user-images.githubusercontent.com/70736001/122506020-75eacc00-d038-11eb-99df-4a4b90478bc3.png)
+1.배포 중 부하테스트 수행 시 POD 상태
+배포 중인 POD들과 정상 실행중인 POD 존재
+hpa 설정에 의해 target 지수 초과하여 POD scale-out 진행됨
 
-2.부하테스트 후
+![image](https://user-images.githubusercontent.com/84000959/124501096-eb59e900-ddfb-11eb-98b9-fd4a32959a69.png)
 
-![image](https://user-images.githubusercontent.com/70736001/122506060-84d17e80-d038-11eb-8449-b94b28a0f385.png)
+2.배포 중 부하테스트 수행 결과(siege)
+배포가 진행되는 동안 부하테스트를 진행한 결과, 정상 실행중인 pod로의 요청은 성공(201), 배포중인 pod로의 요청은 실패(503 - Service Unavailable) 확인
 
-3.생성중인 Pod 에 대한 요청이 들어가 오류발생
+![image](https://user-images.githubusercontent.com/84000959/124501180-09274e00-ddfc-11eb-8c7d-34eb1b44bd89.png)
 
-![image](https://user-images.githubusercontent.com/70736001/122506129-a03c8980-d038-11eb-8822-5ec57926b900.png)
-
-- 정상 실행중인 pod로의 요청은 성공(201), 비정상적인 요청은 실패(503 - Service Unavailable) 확인
-
-- hpa 설정에 의해 target 지수 초과하여 pod scale-out 진행됨
 
 - deployment.yml에 readinessProbe 설정 후 부하발생 및 Availability 100% 확인
 
-![image](https://user-images.githubusercontent.com/70736001/122506358-2527a300-d039-11eb-84cb-62eb09687bda.png)
+![image](https://user-images.githubusercontent.com/84000959/124502308-3117b100-ddfe-11eb-89ad-5548be5c3d9f.png)
 
-1.부하테스트 전
+1.배포 중 부하테스트 수행 시 POD 상태
+배포 중인 POD들과 정상 실행중인 POD 존재
 
-![image](https://user-images.githubusercontent.com/70736001/122506400-3c669080-d039-11eb-8e5e-a4f76b0e2956.png)
+![image](https://user-images.githubusercontent.com/84000959/124502103-c6667580-ddfd-11eb-9cb2-8f1784087690.png)
 
-2.부하테스트 후
+2.배포 중 부하테스트 수행 결과(siege)
+readiness 정상 적용 후, Availability 100% 확인
 
-![image](https://user-images.githubusercontent.com/70736001/122506421-4be5d980-d039-11eb-92a2-44e7827299bf.png)
-
-3.readiness 정상 적용 후, Availability 100% 확인
-
-![image](https://user-images.githubusercontent.com/70736001/122506471-61f39a00-d039-11eb-9077-608f375e27f3.png)
+![image](https://user-images.githubusercontent.com/84000959/124502144-e007bd00-ddfd-11eb-8059-8f23ec42ee11.png)
 
 
 ## Self-healing (Liveness Probe)
 쿠버네티스는 각 컨테이너의 상태를 주기적으로 체크(Health Check)해서 문제가 있는 컨테이너는 자동으로재시작한다.
 
 - depolyment.yml 파일의 path 및 port를 잘못된 값으로 변경
-  depolyment.yml(procurement/procurementrequest/kubernetes/deployment.yml)
+  depolyment.yml(procurement/procurementmanagement/kubernetes/deployment.yml)
 ```
  livenessProbe:
     httpGet:
-        path: '/deliveryrequests/failed'
+        path: '/actuator/failed'
         port: 8090
       initialDelaySeconds: 30
       timeoutSeconds: 2
@@ -937,53 +1090,28 @@ siege -c100 -t5S -v --content-type "application/json" 'http://xx.xx.xx.xx:8080/d
       failureThreshold: 5
 ```
 
-![image](https://user-images.githubusercontent.com/70736001/122506714-d75f6a80-d039-11eb-8bd0-223490797b58.png)
-
 - liveness 설정 적용되어 컨테이너 재시작 되는 것을 확인
   Retry 시도 확인 (pod 생성 "RESTARTS" 숫자가 늘어나는 것을 확인) 
 
-1.배포 전
+![image](https://user-images.githubusercontent.com/84000959/124503030-a6d04c80-ddff-11eb-922c-ee15f9ceefac.png)
 
-![image](https://user-images.githubusercontent.com/70736001/122506797-fb22b080-d039-11eb-9a0b-754e0fea45b2.png)
-
-2.배포 후
-
-![image](https://user-images.githubusercontent.com/70736001/122506831-0c6bbd00-d03a-11eb-880c-dc8d3e00798f.png)
-
-## Circuit Breaker
-서킷 브레이킹 프레임워크의 선택: Spring FeignClient + Hystrix 옵션을 사용하여 구현함
-시나리오는 검사결과등록(물품요구:procurementrequest)-->검사결과공지(물품관리:procurementmanagement) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 검사결과등록이 과도할 경우 CB 를 통하여 장애격리.
-
-
-- Hystrix 를 설정: 요청처리 쓰레드에서 처리시간이 1000ms가 넘어서기 시작하면 CB 작동하도록 설정
-
-**application.yml (procurementrequest)**
+- depolyment.yml 파일의 path 및 port를 정상으로 원복
+  depolyment.yml(procurement/procurementmanagement/kubernetes/deployment.yml)
 ```
-feign:
-  hystrix:
-    enabled: true
-
-hystrix:
-  command:
-    default:
-      execution.isolation.thread.timeoutInMilliseconds: 1000
+ livenessProbe:
+    httpGet:
+        path: '/actuator/health'
+        port: 8080
+      initialDelaySeconds: 120
+      timeoutSeconds: 2
+      periodSeconds: 5
+      failureThreshold: 5
 ```
 
-- 피호출 서비스(납품관리:procurementmanagement) 의 임의 부하 처리 - 800ms에서 증감 300ms 정도하여 800~1100 ms 사이에서 발생하도록 처리
-DeliverymanagementController.java
-```
-req/res를 처리하는 피호출 function에 sleep 추가
+- liveness 설정 적용되어 컨테이너 재시작 되지 않는 것 확인
 
-	try {
-	   Thread.sleep((long) (800 + Math.random() * 300));
-	} catch (InterruptedException e) {
-	   e.printStackTrace();
-	}
-```
+![image](https://user-images.githubusercontent.com/84000959/124503549-c74cd680-de00-11eb-8532-28c5a2338ce5.png)
 
-- req/res 호출하는 위치가 onPostUpdate에 있어 실제로 Data Update가 발생하지 않으면 호출이 되지 않는 문제가 있어 siege를 2개 실행하여 Update가 지속적으로 발생하게 처리 함
-```
-siege -c2 –t20S  -v --content-type "application/json" 'http://xx.xx.xx.xx:8080/inspectionresults/2 PATCH {"procNo":"pp01","inspectionSuccFlag":"true"}'
-siege -c2 –t20S  -v --content-type "application/json" 'http://xx.xx.xx.xx:8080/inspectionresults/2 PATCH {"procNo":"pp01","inspectionSuccFlag":"false"}'
-```
-![image](https://user-images.githubusercontent.com/70736001/122508763-7b96e080-d03d-11eb-90f8-8380277cdc17.png)
+
+
+## The End.
