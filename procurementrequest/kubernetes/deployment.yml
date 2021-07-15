@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: procurementrequest
-          image: procurementacr.azurecr.io/procurementrequest:v2
+          image: user06acr.azurecr.io/procurementrequest:v7
           ports:
             - containerPort: 8080
           env:
@@ -26,11 +26,9 @@ spec:
                 configMapKeyRef:
                   name: procurement-cm
                   key: url
-      imagePullSecrets:
-        - name: regcred
           #readinessProbe:
           #  httpGet:
-          #    path: '/deliveryrequests'
+          #    path: '/actuator/health'
           #    port: 8080
           #  initialDelaySeconds: 10
           #  timeoutSeconds: 2
@@ -38,9 +36,23 @@ spec:
           #  failureThreshold: 10
           #livenessProbe:
           #  httpGet:
-          #    path: '/deliveryrequests/failed'
-          #    port: 8080
+          #    path: '/actuator/failed'
+          #    port: 8090
           #  initialDelaySeconds: 120
           #  timeoutSeconds: 2
           #  periodSeconds: 5
           #  failureThreshold: 5
+          volumeMounts:
+            - name: volume
+              mountPath: "/mnt/azure"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "500Mi"
+              cpu: "500m"
+      volumes:
+      - name: volume
+        persistentVolumeClaim:
+          claimName: procurementrequest-disk

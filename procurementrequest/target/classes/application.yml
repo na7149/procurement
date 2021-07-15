@@ -80,9 +80,15 @@ spring:
         event-out:
           destination: procurement
           contentType: application/json
+
 api:
   url:
     procurement: ${procurement-url}
+
+logging:
+  level:
+    root: info
+  file: /mnt/azure/logs/procurementrequest.log
 
 feign:
   hystrix:
@@ -90,6 +96,5 @@ feign:
 
 hystrix:
   command:
-    # 전역설정
     default:
       execution.isolation.thread.timeoutInMilliseconds: 1000

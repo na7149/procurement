@@ -17,6 +17,6 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: procurementacr.azurecr.io/gateway:v1
+          image: user06acr.azurecr.io/gateway:v2
           ports:
             - containerPort: 8080

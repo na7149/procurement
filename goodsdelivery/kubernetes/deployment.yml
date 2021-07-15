@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: goodsdelivery
-          image: procurementacr.azurecr.io/goodsdelivery:v1
+          image: user06acr.azurecr.io/goodsdelivery:v1
           ports:
             - containerPort: 8080
           #readinessProbe:
